@@ -6,15 +6,46 @@
                 <h2 class="bm-title">Booking Manager</h2>
                 <span class="bm-summary">{{ selectionSummary }}</span>
             </div>
-            <div class="bm-global-right">
-                <div v-if="headers.length >= 2" class="bm-menu-wrap">
-                    <button ref="globalMenuBtn" class="bm-icon-btn bm-icon-btn--light" @click.stop="toggleMenu('global', $event)">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <circle cx="8" cy="3" r="1.5" />
-                            <circle cx="8" cy="8" r="1.5" />
-                            <circle cx="8" cy="13" r="1.5" />
-                        </svg>
-                    </button>
+            <div v-if="headers.length >= 2" class="bm-global-right">
+                <button
+                    class="bm-icon-btn bm-icon-btn--light"
+                    :disabled="isLocked"
+                    @click="toggleExpand('global', { type: 'global' })"
+                >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Global expand -->
+        <div class="bm-expand-wrap" :class="{ 'is-open': expandedKey === 'global' }">
+            <div class="bm-expand-overflow">
+                <div v-if="shouldRender('global')" class="bm-expand-content bm-expand-bar">
+                    <template v-if="expandPhase === 'actions'">
+                        <div class="bm-expand-actions">
+                            <button class="bm-action-btn" @click="startCombine">Combine Selected</button>
+                        </div>
+                    </template>
+                    <template v-else-if="expandPhase === 'confirm'">
+                        <div class="bm-expand-confirm">
+                            <p class="bm-confirm-msg">{{ confirmMessage }}</p>
+                            <div class="bm-expand-actions">
+                                <button class="bm-secondary-btn" @click="cancelToActions">Cancel</button>
+                                <button class="bm-action-btn" @click="executeConfirm">Confirm</button>
+                            </div>
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div class="bm-expand-status-row">
+                            <span v-if="expandPhase === 'attempting'" class="bm-status-chip bm-status-chip--attempting">Attempting…</span>
+                            <span v-else-if="expandPhase === 'succeeded'" class="bm-status-chip bm-status-chip--succeeded">Succeeded</span>
+                            <template v-else-if="expandPhase === 'failed'">
+                                <span class="bm-status-chip bm-status-chip--failed">{{ pendingAction?.errorMessage || 'Failed' }}</span>
+                                <button class="bm-action-btn bm-action-btn--danger" @click="doRetry">Retry</button>
+                                <button class="bm-secondary-btn" @click="dismissFailure">Dismiss</button>
+                            </template>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
@@ -22,10 +53,7 @@
         <!-- ═══════════ BODY ═══════════ -->
         <div class="bm-body">
             <div v-if="!resolvedHeaders.length" class="bm-empty">
-                <svg class="bm-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="3" width="20" height="18" rx="2" />
-                    <path d="M8 7h8M8 12h5" />
-                </svg>
+                <svg class="bm-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7h8M8 12h5"/></svg>
                 <p>No bookings selected</p>
             </div>
 
@@ -35,10 +63,7 @@
                     <div class="bm-card-info">
                         <div class="bm-card-top">
                             <span class="bm-bn">{{ hdr.bookingnumber }}</span>
-                            <span
-                                class="bm-status-pill"
-                                :style="headerStatusStyle(hdr.status)"
-                            >{{ hdr.status || '-' }}</span>
+                            <span class="bm-status-pill" :style="headerStatusStyle(hdr.status)">{{ hdr.status || '-' }}</span>
                         </div>
                         <div class="bm-card-title">{{ hdr.bookingtitle || '-' }}</div>
                         <div class="bm-card-meta">
@@ -46,22 +71,47 @@
                             <span class="bm-sep">·</span>
                             <span>{{ hdr.formattedDate }}</span>
                         </div>
-                        <div class="bm-card-counts">
-                            {{ hdr.unique_skus ?? 0 }} Unique SKUs · {{ hdr.total_quantity ?? 0 }} Total Qty
-                        </div>
+                        <div class="bm-card-counts">{{ hdr.unique_skus ?? 0 }} Unique SKUs · {{ hdr.total_quantity ?? 0 }} Total Qty</div>
                     </div>
-                    <div class="bm-menu-wrap">
-                        <button class="bm-icon-btn" @click.stop="toggleMenu(`h:${hdr.id}`, $event)">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <circle cx="8" cy="3" r="1.5" />
-                                <circle cx="8" cy="8" r="1.5" />
-                                <circle cx="8" cy="13" r="1.5" />
-                            </svg>
-                        </button>
+                    <button class="bm-icon-btn" :disabled="isLocked" @click="toggleExpand(`h:${hdr.id}`, { type: 'header', hdr })">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                    </button>
+                </div>
+
+                <!-- Header expand -->
+                <div class="bm-expand-wrap" :class="{ 'is-open': expandedKey === `h:${hdr.id}` }">
+                    <div class="bm-expand-overflow">
+                        <div v-if="shouldRender(`h:${hdr.id}`)" class="bm-expand-content bm-expand-bar">
+                            <template v-if="expandPhase === 'actions'">
+                                <div class="bm-expand-actions">
+                                    <button class="bm-action-btn" @click="startReleaseHeader">Release Booking</button>
+                                </div>
+                            </template>
+                            <template v-else-if="expandPhase === 'confirm'">
+                                <div class="bm-expand-confirm">
+                                    <p class="bm-confirm-msg">{{ confirmMessage }}</p>
+                                    <div class="bm-expand-actions">
+                                        <button class="bm-secondary-btn" @click="cancelToActions">Cancel</button>
+                                        <button class="bm-action-btn" @click="executeConfirm">Confirm</button>
+                                    </div>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <div class="bm-expand-status-row">
+                                    <span v-if="expandPhase === 'attempting'" class="bm-status-chip bm-status-chip--attempting">Attempting…</span>
+                                    <span v-else-if="expandPhase === 'succeeded'" class="bm-status-chip bm-status-chip--succeeded">Succeeded</span>
+                                    <template v-else-if="expandPhase === 'failed'">
+                                        <span class="bm-status-chip bm-status-chip--failed">{{ pendingAction?.errorMessage || 'Failed' }}</span>
+                                        <button class="bm-action-btn bm-action-btn--danger" @click="doRetry">Retry</button>
+                                        <button class="bm-secondary-btn" @click="dismissFailure">Dismiss</button>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Line items column header -->
+                <!-- Lines column header -->
                 <div class="bm-lines-head">
                     <span class="bm-lh bm-lh-img"></span>
                     <span class="bm-lh bm-lh-product">Product</span>
@@ -73,39 +123,95 @@
                 </div>
 
                 <!-- Line items -->
-                <div v-for="item in hdr.items" :key="item._key" class="bm-line">
-                    <div class="bm-l bm-l-img">
-                        <img v-if="item.imagelink" :src="item.imagelink" :alt="item.sku" class="bm-product-img" />
-                        <div v-else class="bm-img-ph">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <rect x="3" y="3" width="18" height="18" rx="2" />
-                                <circle cx="8.5" cy="8.5" r="1.5" />
-                                <path d="M21 15l-5-5L5 21" />
-                            </svg>
+                <div v-for="item in hdr.items" :key="item._key" class="bm-line-wrap">
+                    <div class="bm-line">
+                        <div class="bm-l bm-l-img">
+                            <img v-if="item.imagelink" :src="item.imagelink" :alt="item.sku" class="bm-product-img"/>
+                            <div v-else class="bm-img-ph">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                            </div>
+                        </div>
+                        <div class="bm-l bm-l-product">
+                            <span class="bm-l-model">{{ item.model || 'Unknown' }}</span>
+                            <span class="bm-l-variant">{{ [item.color, item.size].filter(Boolean).join(' · ') || '-' }}</span>
+                        </div>
+                        <div class="bm-l bm-l-sku">{{ item.sku }}</div>
+                        <div class="bm-l bm-l-avail" :class="{ 'is-low': item.balance <= 0 }">{{ item.balance }}</div>
+                        <div class="bm-l bm-l-status">
+                            <span class="bm-status-pill bm-status-pill--sm" :style="lineStatusStyle(item.status)">{{ item.status || '-' }}</span>
+                        </div>
+                        <div class="bm-l bm-l-qty">{{ item.quantity }}</div>
+                        <div class="bm-l bm-l-action">
+                            <button class="bm-icon-btn bm-icon-btn--sm" :disabled="isLocked" @click="toggleExpand(`l:${hdr.id}:${item._key}`, { type: 'line', hdr, item })">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+                            </button>
                         </div>
                     </div>
-                    <div class="bm-l bm-l-product">
-                        <span class="bm-l-model">{{ item.model || 'Unknown' }}</span>
-                        <span class="bm-l-variant">{{ [item.color, item.size].filter(Boolean).join(' · ') || '-' }}</span>
-                    </div>
-                    <div class="bm-l bm-l-sku">{{ item.sku }}</div>
-                    <div class="bm-l bm-l-avail" :class="{ 'is-low': item.balance <= 0 }">{{ item.balance }}</div>
-                    <div class="bm-l bm-l-status">
-                        <span
-                            class="bm-status-pill bm-status-pill--sm"
-                            :style="lineStatusStyle(item.status)"
-                        >{{ item.status || '-' }}</span>
-                    </div>
-                    <div class="bm-l bm-l-qty">{{ item.quantity }}</div>
-                    <div class="bm-l bm-l-action">
-                        <div class="bm-menu-wrap">
-                            <button class="bm-icon-btn bm-icon-btn--sm" @click.stop="toggleMenu(`l:${hdr.id}:${item._key}`, $event)">
-                                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                                    <circle cx="8" cy="3" r="1.5" />
-                                    <circle cx="8" cy="8" r="1.5" />
-                                    <circle cx="8" cy="13" r="1.5" />
-                                </svg>
-                            </button>
+
+                    <!-- Line expand -->
+                    <div class="bm-expand-wrap" :class="{ 'is-open': expandedKey === `l:${hdr.id}:${item._key}` }">
+                        <div class="bm-expand-overflow">
+                            <div v-if="shouldRender(`l:${hdr.id}:${item._key}`)" class="bm-expand-content bm-expand-line">
+
+                                <!-- Actions -->
+                                <template v-if="expandPhase === 'actions'">
+                                    <div class="bm-expand-actions">
+                                        <button class="bm-action-btn" @click="startReleaseLine">Release Line</button>
+                                        <button class="bm-action-btn" @click="startUpdateQty">Update Quantity</button>
+                                    </div>
+                                </template>
+
+                                <!-- Confirm release -->
+                                <template v-else-if="expandPhase === 'confirm'">
+                                    <div class="bm-expand-confirm">
+                                        <p class="bm-confirm-msg">{{ confirmMessage }}</p>
+                                        <div class="bm-expand-actions">
+                                            <button class="bm-secondary-btn" @click="cancelToActions">Cancel</button>
+                                            <button class="bm-action-btn" @click="executeConfirm">Confirm</button>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Update quantity form -->
+                                <template v-else-if="expandPhase === 'updateQty'">
+                                    <div class="bm-inline-edit">
+                                        <div class="bm-ie-header">
+                                            <span class="bm-ie-model">{{ expandCtx?.item?.model || 'Unknown' }}</span>
+                                            <span class="bm-ie-variant">{{ editVariant }}</span>
+                                        </div>
+                                        <span class="bm-ie-sku">{{ expandCtx?.item?.sku }}</span>
+                                        <div class="bm-ie-row">
+                                            <label class="bm-ie-label">New Qty</label>
+                                            <input type="number" class="bm-ie-input" v-model.number="editQtyValue" min="0"/>
+                                            <div class="bm-ie-avail" :class="{ 'is-neg': editAvailability < 0, 'is-del': editQtyValue === 0 }">
+                                                <template v-if="editQtyValue > 0">
+                                                    Avail after: <strong>{{ editAvailability }}</strong>
+                                                </template>
+                                                <template v-else>Qty 0 = delete line</template>
+                                            </div>
+                                        </div>
+                                        <p v-if="editAvailability < 0 && editQtyValue > 0" class="bm-ie-err">Cannot exceed available stock</p>
+                                        <div class="bm-expand-actions">
+                                            <button class="bm-secondary-btn" @click="cancelToActions">Cancel</button>
+                                            <button v-if="editQtyValue > 0" class="bm-action-btn" :disabled="editAvailability < 0" @click="submitUpdateQty">Submit</button>
+                                            <button v-else class="bm-action-btn bm-action-btn--danger" @click="submitDeleteViaQty">Delete Line Item</button>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Status -->
+                                <template v-else>
+                                    <div class="bm-expand-status-row">
+                                        <span v-if="expandPhase === 'attempting'" class="bm-status-chip bm-status-chip--attempting">Attempting…</span>
+                                        <span v-else-if="expandPhase === 'succeeded'" class="bm-status-chip bm-status-chip--succeeded">Succeeded</span>
+                                        <template v-else-if="expandPhase === 'failed'">
+                                            <span class="bm-status-chip bm-status-chip--failed">{{ pendingAction?.errorMessage || 'Failed' }}</span>
+                                            <button class="bm-action-btn bm-action-btn--danger" @click="doRetry">Retry</button>
+                                            <button class="bm-secondary-btn" @click="dismissFailure">Dismiss</button>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -113,124 +219,11 @@
                 <div v-if="!hdr.items.length" class="bm-no-lines">No line items</div>
             </div>
         </div>
-
-        <!-- ═══════════ FIXED DROPDOWN (position:fixed, escapes all containers) ═══════════ -->
-        <teleport to="body">
-            <transition name="bm-drop">
-                <div
-                    v-if="openMenu"
-                    class="bm-dropdown-fixed"
-                    :style="dropdownPos"
-                    @click.stop
-                >
-                    <!-- Global menu -->
-                    <template v-if="openMenu === 'global'">
-                        <button
-                            class="bm-dd-item"
-                            :class="actionBtnClasses(combineKey)"
-                            :disabled="getButtonState(combineKey) === 'attempting'"
-                            @click="onCombineClick"
-                        >
-                            {{ getButtonLabel(combineKey, 'Combine Selected') }}
-                        </button>
-                    </template>
-                    <!-- Header menu -->
-                    <template v-else-if="openMenuCtx?.type === 'header'">
-                        <button
-                            class="bm-dd-item"
-                            :class="actionBtnClasses(`delete_header:${openMenuCtx.hdr.id}`)"
-                            :disabled="getButtonState(`delete_header:${openMenuCtx.hdr.id}`) === 'attempting'"
-                            @click="onDeleteHeaderClick(openMenuCtx.hdr)"
-                        >
-                            {{ getButtonLabel(`delete_header:${openMenuCtx.hdr.id}`, 'Release Booking') }}
-                        </button>
-                    </template>
-                    <!-- Line menu -->
-                    <template v-else-if="openMenuCtx?.type === 'line'">
-                        <button
-                            class="bm-dd-item"
-                            :class="actionBtnClasses(`delete_lineitem:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`)"
-                            :disabled="getButtonState(`delete_lineitem:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`) === 'attempting'"
-                            @click="onDeleteLineClick(openMenuCtx.hdr, openMenuCtx.item)"
-                        >
-                            {{ getButtonLabel(`delete_lineitem:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`, 'Release Line') }}
-                        </button>
-                        <button
-                            class="bm-dd-item"
-                            :class="actionBtnClasses(`updatequantity:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`)"
-                            :disabled="getButtonState(`updatequantity:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`) === 'attempting'"
-                            @click="onUpdateQtyClick(openMenuCtx.hdr, openMenuCtx.item)"
-                        >
-                            {{ getButtonLabel(`updatequantity:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`, 'Update Quantity') }}
-                        </button>
-                    </template>
-                </div>
-            </transition>
-        </teleport>
-
-        <!-- ═══════════ CONFIRMATION MODAL ═══════════ -->
-        <transition name="bm-fade">
-            <div v-if="confirmState" class="bm-overlay" @click.self="closeConfirm">
-                <div class="bm-modal">
-                    <h3 class="bm-modal-title">{{ confirmState.title }}</h3>
-                    <p class="bm-modal-msg">{{ confirmState.message }}</p>
-                    <div class="bm-modal-footer">
-                        <button class="bm-btn bm-btn--cancel" @click="closeConfirm">Cancel</button>
-                        <button class="bm-btn bm-btn--confirm" @click="onConfirmAction">Confirm</button>
-                    </div>
-                </div>
-            </div>
-        </transition>
-
-        <!-- ═══════════ EDIT QUANTITY MODAL ═══════════ -->
-        <transition name="bm-fade">
-            <div v-if="editState" class="bm-overlay" @click.self="closeEdit">
-                <div class="bm-modal">
-                    <h3 class="bm-modal-title">Update Quantity</h3>
-                    <div class="bm-edit-product-info">
-                        <span class="bm-edit-product-model">{{ editState.item.model || 'Unknown' }}</span>
-                        <span class="bm-edit-product-variant">{{ editProductVariant }}</span>
-                    </div>
-                    <div class="bm-edit-product-sku">{{ editState.item.sku }}</div>
-                    <div class="bm-edit-field">
-                        <label class="bm-edit-label">New Quantity</label>
-                        <input
-                            type="number"
-                            class="bm-edit-input"
-                            v-model.number="editState.desiredQty"
-                            min="0"
-                        />
-                    </div>
-                    <div v-if="editState.desiredQty > 0" class="bm-edit-avail" :class="{ 'bm-edit-avail--neg': editAvailability < 0 }">
-                        <span>Availability after Update</span>
-                        <strong>{{ editAvailability }}</strong>
-                    </div>
-                    <div v-else class="bm-edit-avail bm-edit-avail--del">
-                        <span>Setting quantity to 0 will delete this line item</span>
-                    </div>
-                    <p v-if="editAvailability < 0 && editState.desiredQty > 0" class="bm-edit-err">Cannot exceed available stock</p>
-                    <div class="bm-modal-footer">
-                        <button class="bm-btn bm-btn--cancel" @click="closeEdit">Cancel</button>
-                        <button
-                            v-if="editState.desiredQty > 0"
-                            class="bm-btn bm-btn--confirm"
-                            :disabled="editAvailability < 0"
-                            @click="onEditSubmit"
-                        >Submit</button>
-                        <button
-                            v-else
-                            class="bm-btn bm-btn--delete"
-                            @click="onEditDeleteSubmit"
-                        >Delete Line Item</button>
-                    </div>
-                </div>
-            </div>
-        </transition>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({
     content: { type: Object, required: true },
@@ -264,13 +257,7 @@ function formatDate(dateStr) {
 }
 
 function cleanHeader(h) {
-    return {
-        id: h.id,
-        bookingnumber: h.bookingnumber,
-        created_at: h.created_at,
-        bookingtitle: h.bookingtitle,
-        pic_id: h.pic_id,
-    };
+    return { id: h.id, bookingnumber: h.bookingnumber, created_at: h.created_at, bookingtitle: h.bookingtitle, pic_id: h.pic_id };
 }
 
 function cleanItem(item) {
@@ -285,18 +272,10 @@ function deepClone(obj) {
 
 // ── Data Resolution ────────────────────────────────────────
 
-const referenceData = computed(() =>
-    wwLib.wwUtils.getDataFromCollection(props.content?.referenceData) || []
-);
-const headers = computed(() =>
-    wwLib.wwUtils.getDataFromCollection(props.content?.selectedHeaders) || []
-);
-const lineItems = computed(() =>
-    wwLib.wwUtils.getDataFromCollection(props.content?.selectedLineItems) || []
-);
-const picReference = computed(() =>
-    wwLib.wwUtils.getDataFromCollection(props.content?.picReference) || []
-);
+const referenceData = computed(() => wwLib.wwUtils.getDataFromCollection(props.content?.referenceData) || []);
+const headers = computed(() => wwLib.wwUtils.getDataFromCollection(props.content?.selectedHeaders) || []);
+const lineItems = computed(() => wwLib.wwUtils.getDataFromCollection(props.content?.selectedLineItems) || []);
+const picReference = computed(() => wwLib.wwUtils.getDataFromCollection(props.content?.picReference) || []);
 const stagingData = computed(() => {
     const raw = props.content?.stagingData;
     if (!raw) return null;
@@ -352,7 +331,7 @@ const headerItemsMap = computed(() => {
     return map;
 });
 
-// ── Resolved Headers (enriched for display) ────────────────
+// ── Resolved Headers ───────────────────────────────────────
 
 const resolvedHeaders = computed(() =>
     headers.value.map(h => {
@@ -368,28 +347,19 @@ const resolvedHeaders = computed(() =>
                 balance: ref ? (Number(ref.balance) || 0) : 0,
             };
         });
-        return {
-            ...h,
-            picName: picLookup.value[h.pic_id] || h.pic_id || '-',
-            formattedDate: formatDate(h.created_at),
-            items,
-        };
+        return { ...h, picName: picLookup.value[h.pic_id] || h.pic_id || '-', formattedDate: formatDate(h.created_at), items };
     })
 );
 
 // ── Selection Summary ──────────────────────────────────────
 
 const selectionSummary = computed(() => {
-    let unique = 0;
-    let total = 0;
-    headers.value.forEach(h => {
-        unique += Number(h.unique_skus) || 0;
-        total += Number(h.total_quantity) || 0;
-    });
+    let unique = 0, total = 0;
+    headers.value.forEach(h => { unique += Number(h.unique_skus) || 0; total += Number(h.total_quantity) || 0; });
     return `${unique} Unique, ${total} Total`;
 });
 
-// ── Root Styles (CSS variables from config) ────────────────
+// ── Root Styles ────────────────────────────────────────────
 
 const rootStyles = computed(() => ({
     '--bm-card-bg': props.content?.cardBgColor || '#ffffff',
@@ -400,110 +370,143 @@ const rootStyles = computed(() => ({
     '--bm-line-hover': props.content?.lineHoverColor || '#f3f4f6',
     '--bm-global-bg': props.content?.globalHeaderBgColor || '#111827',
     '--bm-global-text': props.content?.globalHeaderTextColor || '#ffffff',
-    '--bm-dd-btn': props.content?.dropdownBtnColor || '#111827',
     '--bm-font': props.content?.fontFamily || "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     '--bm-font-size': props.content?.fontSize || '13px',
+    '--bm-act-bg': props.content?.actionBtnColor || '#111827',
+    '--bm-act-text': props.content?.actionBtnTextColor || '#ffffff',
+    '--bm-act-hover': props.content?.actionBtnHoverColor || '#1f2937',
+    '--bm-act-radius': props.content?.actionBtnRadius || '6px',
 }));
 
-// ── Dropdown Menu State (position:fixed approach) ──────────
+// ── Expansion State ────────────────────────────────────────
+// expandedKey: 'global' | 'h:<id>' | 'l:<headerId>:<itemKey>' | null
+// expandPhase: 'actions' | 'confirm' | 'updateQty' | 'attempting' | 'succeeded' | 'failed'
 
-const openMenu = ref(null);
-const openMenuCtx = ref(null);
-const dropdownPos = ref({});
+const expandedKey = ref(null);
+const expandPhase = ref('actions');
+const expandCtx = ref(null);
+const prevExpandedKey = ref(null);
 
-function toggleMenu(key, event) {
-    if (openMenu.value === key) {
-        closeAllMenus();
-        return;
+watch(expandedKey, (_newKey, oldKey) => {
+    if (oldKey) {
+        prevExpandedKey.value = oldKey;
+        setTimeout(() => { prevExpandedKey.value = null; }, 350);
     }
+});
 
-    const btn = event.currentTarget;
-    const rect = btn.getBoundingClientRect();
+function shouldRender(key) {
+    return key === expandedKey.value || key === prevExpandedKey.value;
+}
 
-    // Parse context from key
-    let ctx = null;
-    if (key.startsWith('h:')) {
-        const hdrId = key.slice(2);
-        ctx = { type: 'header', hdr: resolvedHeaders.value.find(h => h.id === hdrId) };
-    } else if (key.startsWith('l:')) {
-        const parts = key.split(':');
-        const hdrId = parts[1];
-        const itemKey = parts.slice(2).join(':');
-        const hdr = resolvedHeaders.value.find(h => h.id === hdrId);
-        const item = hdr?.items?.find(i => i._key === itemKey);
-        ctx = { type: 'line', hdr, item };
+function toggleExpand(key, ctx) {
+    if (isLocked.value) return;
+    if (expandedKey.value === key) {
+        collapseExpand();
+    } else {
+        expandedKey.value = key;
+        expandPhase.value = 'actions';
+        expandCtx.value = ctx;
+        editQtyValue.value = 0;
     }
-
-    openMenuCtx.value = ctx;
-    openMenu.value = key;
-
-    nextTick(() => {
-        dropdownPos.value = {
-            position: 'fixed',
-            top: `${rect.bottom + 4}px`,
-            right: `${window.innerWidth - rect.right}px`,
-            zIndex: 99999,
-            '--bm-dd-btn': props.content?.dropdownBtnColor || '#111827',
-        };
-    });
 }
 
-function closeAllMenus() {
-    openMenu.value = null;
-    openMenuCtx.value = null;
+function collapseExpand() {
+    expandedKey.value = null;
+    expandPhase.value = 'actions';
+    expandCtx.value = null;
 }
 
-// ── Pending Actions & Button State ─────────────────────────
-
-const pendingActions = reactive(new Map());
-
-function getPendingKey(action, headerId, sku) {
-    if (sku) return `${action}:${headerId}:${sku}`;
-    if (headerId && headerId !== 'all') return `${action}:${headerId}`;
-    return `${action}:all`;
+function cancelToActions() {
+    expandPhase.value = 'actions';
 }
 
-function getButtonState(key) {
-    const entry = pendingActions.get(key);
-    return entry ? entry.status : 'idle';
+// ── Pending Action (single, global lock) ───────────────────
+
+const pendingAction = ref(null);
+const isLocked = computed(() => !!pendingAction.value);
+
+// ── Confirm State ──────────────────────────────────────────
+
+const confirmMessage = ref('');
+let pendingConfirmFn = null;
+
+// ── Edit Qty State ─────────────────────────────────────────
+
+const editQtyValue = ref(0);
+
+/*
+ * Inventory meaning 1 (balance = available after all bookings including this line):
+ *   availability_after_update = balance + original_qty - desired_qty
+ */
+const editAvailability = computed(() => {
+    if (!expandCtx.value?.item) return 0;
+    const item = expandCtx.value.item;
+    return (item.balance ?? 0) + (item.quantity ?? 0) - (editQtyValue.value ?? 0);
+});
+
+const editVariant = computed(() => {
+    if (!expandCtx.value?.item) return '';
+    return [expandCtx.value.item.color, expandCtx.value.item.size].filter(Boolean).join(' · ') || '';
+});
+
+// ── Action Initiators ──────────────────────────────────────
+
+function startCombine() {
+    const first = resolvedHeaders.value[0];
+    if (!first) return;
+    confirmMessage.value =
+        `Combine all ${headers.value.length} bookings under:\n` +
+        `${first.bookingnumber} — ${first.bookingtitle || '-'}`;
+    pendingConfirmFn = doCombine;
+    expandPhase.value = 'confirm';
 }
 
-function getButtonLabel(key, defaultLabel) {
-    const state = getButtonState(key);
-    if (state === 'attempting') return 'Attempting\u2026';
-    if (state === 'succeeded') return 'Succeeded';
-    if (state === 'failed') return 'Failed \u2014 Retry';
-    return defaultLabel;
+function startReleaseHeader() {
+    const hdr = expandCtx.value?.hdr;
+    if (!hdr) return;
+    confirmMessage.value = `Release booking ${hdr.bookingnumber} and all its line items?`;
+    pendingConfirmFn = doReleaseHeader;
+    expandPhase.value = 'confirm';
 }
 
-function actionBtnClasses(key) {
-    const s = getButtonState(key);
-    return {
-        'bm-dd-item--attempting': s === 'attempting',
-        'bm-dd-item--succeeded': s === 'succeeded',
-        'bm-dd-item--failed': s === 'failed',
-    };
+function startReleaseLine() {
+    const ctx = expandCtx.value;
+    if (!ctx?.item) return;
+    confirmMessage.value = `Release ${ctx.item.sku} from booking ${ctx.hdr.bookingnumber}?`;
+    pendingConfirmFn = doReleaseLine;
+    expandPhase.value = 'confirm';
 }
 
-const combineKey = computed(() => getPendingKey('combine_selected', 'all'));
+function startUpdateQty() {
+    const ctx = expandCtx.value;
+    if (!ctx?.item) return;
+    editQtyValue.value = ctx.item.quantity ?? 0;
+    expandPhase.value = 'updateQty';
+}
 
-// ── Dispatch & Retry ───────────────────────────────────────
+function executeConfirm() {
+    if (pendingConfirmFn) pendingConfirmFn();
+    pendingConfirmFn = null;
+}
 
-function dispatchAction(key, payload) {
+// ── Dispatch Helpers ───────────────────────────────────────
+
+function dispatch(payload) {
     const requestId = generateId();
     payload.request_id = requestId;
     payload.staging_status = 'Sending';
     payload.updated_at = new Date().toISOString();
 
-    pendingActions.set(key, {
+    pendingAction.value = {
         requestId,
         action: payload.action,
         headerId: payload.booking_header?.id,
-        status: 'attempting',
-        errorMessage: null,
         startedAt: Date.now(),
         payload: deepClone(payload),
-    });
+        errorMessage: null,
+    };
+
+    expandPhase.value = 'attempting';
 
     /* wwEditor:start */
     if (props.wwEditorState?.isEditing) return;
@@ -512,20 +515,72 @@ function dispatchAction(key, payload) {
     emit('trigger-event', { name: 'actionRequest', event: { value: payload } });
 }
 
-function retryAction(key) {
-    const entry = pendingActions.get(key);
-    if (!entry || entry.status !== 'failed') return;
+function doCombine() {
+    const first = resolvedHeaders.value[0];
+    const snapshotItems = resolvedHeaders.value.flatMap(h => (h.items || []).map(i => cleanItem(i)));
+    dispatch({ action: 'combine_selected', is_edit: false, booking_header: cleanHeader(first), booking_items: snapshotItems });
+}
 
+function doReleaseHeader() {
+    const hdr = expandCtx.value?.hdr;
+    if (!hdr) return;
+    const snapshotItems = (hdr.items || []).map(i => cleanItem(i));
+    dispatch({ action: 'delete_header', is_edit: false, booking_header: cleanHeader(hdr), booking_items: snapshotItems });
+}
+
+function doReleaseLine() {
+    const ctx = expandCtx.value;
+    if (!ctx?.item) return;
+    const snapshotItems = (ctx.hdr.items || []).map(i => cleanItem(i));
+    dispatch({
+        action: 'delete_lineitem', is_edit: false,
+        booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
+        target: { header_id: ctx.hdr.id, sku: ctx.item.sku, ...(ctx.item.line_id ? { line_id: ctx.item.line_id } : {}) },
+    });
+}
+
+function submitUpdateQty() {
+    if (editAvailability.value < 0) return;
+    const ctx = expandCtx.value;
+    if (!ctx?.item) return;
+    const desiredQty = editQtyValue.value;
+    const snapshotItems = (headerItemsMap.value[ctx.hdr.id] || []).map(i => {
+        const c = cleanItem(i);
+        if (i.sku === ctx.item.sku && (!ctx.item.line_id || i.line_id === ctx.item.line_id)) c.quantity = desiredQty;
+        return c;
+    });
+    dispatch({
+        action: 'updatequantity', is_edit: true,
+        booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
+        target: { header_id: ctx.hdr.id, sku: ctx.item.sku, ...(ctx.item.line_id ? { line_id: ctx.item.line_id } : {}) },
+    });
+}
+
+function submitDeleteViaQty() {
+    const ctx = expandCtx.value;
+    if (!ctx?.item) return;
+    const snapshotItems = (ctx.hdr.items || []).map(i => cleanItem(i));
+    dispatch({
+        action: 'delete_lineitem', is_edit: false,
+        booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
+        target: { header_id: ctx.hdr.id, sku: ctx.item.sku, ...(ctx.item.line_id ? { line_id: ctx.item.line_id } : {}) },
+    });
+}
+
+// ── Retry & Dismiss ────────────────────────────────────────
+
+function doRetry() {
+    if (!pendingAction.value) return;
     const newId = generateId();
-    const payload = deepClone(entry.payload);
+    const payload = deepClone(pendingAction.value.payload);
     payload.request_id = newId;
     payload.updated_at = new Date().toISOString();
 
-    entry.requestId = newId;
-    entry.status = 'attempting';
-    entry.errorMessage = null;
-    entry.startedAt = Date.now();
-    entry.payload = payload;
+    pendingAction.value.requestId = newId;
+    pendingAction.value.startedAt = Date.now();
+    pendingAction.value.errorMessage = null;
+    pendingAction.value.payload = payload;
+    expandPhase.value = 'attempting';
 
     /* wwEditor:start */
     if (props.wwEditorState?.isEditing) return;
@@ -534,32 +589,35 @@ function retryAction(key) {
     emit('trigger-event', { name: 'actionRequest', event: { value: payload } });
 }
 
-// ── Staging Watcher (matching rule §3.3) ───────────────────
+function dismissFailure() {
+    pendingAction.value = null;
+    collapseExpand();
+}
+
+// ── Staging Watcher ────────────────────────────────────────
 
 watch(stagingData, (newVal) => {
-    if (!newVal || !newVal.action || !newVal.staging_status) return;
+    if (!newVal || !pendingAction.value) return;
+    if (!newVal.action || !newVal.staging_status) return;
     if (newVal.staging_status === 'Sending') return;
 
-    for (const [key, entry] of pendingActions.entries()) {
-        if (entry.status !== 'attempting') continue;
+    const pa = pendingAction.value;
+    const actionMatch = newVal.action === pa.action;
+    const headerMatch = newVal.booking_header?.id === pa.headerId;
+    const reqMatch = !pa.requestId || !newVal.request_id || newVal.request_id === pa.requestId;
 
-        const actionMatch = newVal.action === entry.action;
-        const headerMatch = newVal.booking_header?.id === entry.headerId;
-        const reqMatch = !entry.requestId || !newVal.request_id || newVal.request_id === entry.requestId;
-
-        if (actionMatch && headerMatch && reqMatch) {
-            if (newVal.staging_status === 'Successful') {
-                entry.status = 'succeeded';
-                setTimeout(() => {
-                    if (pendingActions.get(key)?.status === 'succeeded') {
-                        pendingActions.delete(key);
-                    }
-                }, 3000);
-            } else if (newVal.staging_status === 'Failed') {
-                entry.status = 'failed';
-                entry.errorMessage = newVal.error_message || 'Action failed';
-            }
-            break;
+    if (actionMatch && headerMatch && reqMatch) {
+        if (newVal.staging_status === 'Successful') {
+            expandPhase.value = 'succeeded';
+            setTimeout(() => {
+                if (expandPhase.value === 'succeeded') {
+                    pendingAction.value = null;
+                    collapseExpand();
+                }
+            }, 3000);
+        } else if (newVal.staging_status === 'Failed') {
+            expandPhase.value = 'failed';
+            pa.errorMessage = newVal.error_message || 'Action failed';
         }
     }
 }, { deep: true });
@@ -568,240 +626,23 @@ watch(stagingData, (newVal) => {
 
 let timeoutInterval = null;
 
-// ── Confirmation Modal ─────────────────────────────────────
-
-const confirmState = ref(null);
-
-function closeConfirm() {
-    confirmState.value = null;
-}
-
-function onConfirmAction() {
-    if (confirmState.value?.onConfirm) confirmState.value.onConfirm();
-    closeConfirm();
-}
-
-// ── Edit Quantity Modal ────────────────────────────────────
-
-const editState = ref(null);
-
-/*
- * Inventory meaning 1 (balance = available after all bookings including this line):
- *   availability_after_update = balance + original_qty - desired_qty
- */
-const editAvailability = computed(() => {
-    if (!editState.value) return 0;
-    return editState.value.balance + editState.value.originalQty - (editState.value.desiredQty ?? 0);
-});
-
-const editProductVariant = computed(() => {
-    if (!editState.value) return '';
-    return [editState.value.item.color, editState.value.item.size].filter(Boolean).join(' · ') || '';
-});
-
-function closeEdit() {
-    editState.value = null;
-}
-
-// ── Action Handlers ────────────────────────────────────────
-
-function onCombineClick() {
-    const key = combineKey.value;
-    const state = getButtonState(key);
-    if (state === 'attempting') return;
-    if (state === 'failed') { retryAction(key); closeAllMenus(); return; }
-
-    const firstHdr = resolvedHeaders.value[0];
-    if (!firstHdr) return;
-
-    const snapshotHeader = deepClone(firstHdr);
-    const snapshotAllItems = resolvedHeaders.value.flatMap(h =>
-        (h.items || []).map(i => cleanItem(i))
-    );
-
-    closeAllMenus();
-
-    confirmState.value = {
-        title: 'Combine Selected Bookings',
-        message:
-            `This will combine all ${headers.value.length} selected bookings under:\n` +
-            `Booking Number: ${firstHdr.bookingnumber}\n` +
-            `Title: ${firstHdr.bookingtitle || '-'}`,
-        onConfirm: () => {
-            dispatchAction(key, {
-                action: 'combine_selected',
-                is_edit: false,
-                booking_header: cleanHeader(snapshotHeader),
-                booking_items: snapshotAllItems,
-            });
-        },
-    };
-}
-
-function onDeleteHeaderClick(hdr) {
-    const key = getPendingKey('delete_header', hdr.id);
-    const state = getButtonState(key);
-    if (state === 'attempting') return;
-    if (state === 'failed') { retryAction(key); closeAllMenus(); return; }
-
-    const snapshotHeader = deepClone(hdr);
-    const snapshotItems = (hdr.items || []).map(i => cleanItem(i));
-
-    closeAllMenus();
-
-    confirmState.value = {
-        title: 'Release Booking',
-        message: `This will release booking ${hdr.bookingnumber} and all its line items.`,
-        onConfirm: () => {
-            dispatchAction(key, {
-                action: 'delete_header',
-                is_edit: false,
-                booking_header: cleanHeader(snapshotHeader),
-                booking_items: snapshotItems,
-            });
-        },
-    };
-}
-
-function onDeleteLineClick(hdr, item) {
-    const key = getPendingKey('delete_lineitem', hdr.id, item.sku);
-    const state = getButtonState(key);
-    if (state === 'attempting') return;
-    if (state === 'failed') { retryAction(key); closeAllMenus(); return; }
-
-    const snapshotHeader = deepClone(hdr);
-    const snapshotItems = (hdr.items || []).map(i => cleanItem(i));
-
-    closeAllMenus();
-
-    confirmState.value = {
-        title: 'Release Line Item',
-        message: `This will release ${item.sku} from booking ${hdr.bookingnumber}.`,
-        onConfirm: () => {
-            dispatchAction(key, {
-                action: 'delete_lineitem',
-                is_edit: false,
-                booking_header: cleanHeader(snapshotHeader),
-                booking_items: snapshotItems,
-                target: {
-                    header_id: hdr.id,
-                    sku: item.sku,
-                    ...(item.line_id ? { line_id: item.line_id } : {}),
-                },
-            });
-        },
-    };
-}
-
-function onUpdateQtyClick(hdr, item) {
-    const key = getPendingKey('updatequantity', hdr.id, item.sku);
-    const state = getButtonState(key);
-    if (state === 'attempting') return;
-    if (state === 'failed') { retryAction(key); closeAllMenus(); return; }
-
-    closeAllMenus();
-
-    editState.value = {
-        header: hdr,
-        item: item,
-        desiredQty: item.quantity ?? 0,
-        originalQty: item.quantity ?? 0,
-        balance: item.balance ?? 0,
-    };
-}
-
-function onEditSubmit() {
-    if (editAvailability.value < 0) return;
-
-    const hdr = editState.value.header;
-    const item = editState.value.item;
-    const desiredQty = editState.value.desiredQty;
-    const originalQty = editState.value.originalQty;
-
-    const snapshotHeader = deepClone(hdr);
-    const snapshotItems = (headerItemsMap.value[hdr.id] || []).map(i => {
-        const c = cleanItem(i);
-        const isTarget = i.sku === item.sku && (!item.line_id || i.line_id === item.line_id);
-        if (isTarget) c.quantity = desiredQty;
-        return c;
-    });
-
-    closeEdit();
-
-    confirmState.value = {
-        title: 'Confirm Quantity Update',
-        message:
-            `Update ${item.sku} in booking ${hdr.bookingnumber}\n` +
-            `from ${originalQty} to ${desiredQty}?`,
-        onConfirm: () => {
-            const key = getPendingKey('updatequantity', hdr.id, item.sku);
-            dispatchAction(key, {
-                action: 'updatequantity',
-                is_edit: true,
-                booking_header: cleanHeader(snapshotHeader),
-                booking_items: snapshotItems,
-                target: {
-                    header_id: hdr.id,
-                    sku: item.sku,
-                    ...(item.line_id ? { line_id: item.line_id } : {}),
-                },
-            });
-        },
-    };
-}
-
-function onEditDeleteSubmit() {
-    const hdr = editState.value.header;
-    const item = editState.value.item;
-
-    const snapshotHeader = deepClone(hdr);
-    const snapshotItems = (hdr.items || []).map(i => cleanItem(i));
-
-    closeEdit();
-
-    confirmState.value = {
-        title: 'Delete Line Item',
-        message: `This will delete ${item.sku} from booking ${hdr.bookingnumber}.`,
-        onConfirm: () => {
-            const key = getPendingKey('delete_lineitem', hdr.id, item.sku);
-            dispatchAction(key, {
-                action: 'delete_lineitem',
-                is_edit: false,
-                booking_header: cleanHeader(snapshotHeader),
-                booking_items: snapshotItems,
-                target: {
-                    header_id: hdr.id,
-                    sku: item.sku,
-                    ...(item.line_id ? { line_id: item.line_id } : {}),
-                },
-            });
-        },
-    };
-}
-
-// ── Lifecycle ──────────────────────────────────────────────
-
 onMounted(() => {
-    document.addEventListener('click', closeAllMenus);
     timeoutInterval = setInterval(() => {
-        const now = Date.now();
-        for (const [, entry] of pendingActions.entries()) {
-            if (entry.status === 'attempting' && now - entry.startedAt > 60000) {
-                entry.status = 'failed';
-                entry.errorMessage = 'Timed out';
+        if (pendingAction.value && expandPhase.value === 'attempting') {
+            if (Date.now() - pendingAction.value.startedAt > 60000) {
+                expandPhase.value = 'failed';
+                pendingAction.value.errorMessage = 'Timed out';
             }
         }
     }, 5000);
 });
 
 onUnmounted(() => {
-    document.removeEventListener('click', closeAllMenus);
     if (timeoutInterval) clearInterval(timeoutInterval);
 });
 </script>
 
 <style lang="scss" scoped>
-/* ── Reset & Root ─────────────────────────────────── */
 .booking-manager {
     display: flex;
     flex-direction: column;
@@ -814,7 +655,7 @@ onUnmounted(() => {
     *, *::before, *::after { box-sizing: inherit; }
 }
 
-/* ── Global Header ────────────────────────────────── */
+/* ── Global Header ────────────────────────────── */
 .bm-global-header {
     display: flex;
     align-items: center;
@@ -824,25 +665,11 @@ onUnmounted(() => {
     color: var(--bm-global-text);
     flex-shrink: 0;
 }
-.bm-global-left {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    min-width: 0;
-}
-.bm-title {
-    margin: 0;
-    font-size: 1.05em;
-    font-weight: 600;
-    white-space: nowrap;
-}
-.bm-summary {
-    font-size: 0.85em;
-    opacity: 0.75;
-    white-space: nowrap;
-}
+.bm-global-left { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.bm-title { margin: 0; font-size: 1.05em; font-weight: 600; white-space: nowrap; }
+.bm-summary { font-size: 0.85em; opacity: 0.75; white-space: nowrap; }
 
-/* ── Body ─────────────────────────────────────────── */
+/* ── Body ─────────────────────────────────────── */
 .bm-body {
     flex: 1 1 auto;
     overflow-y: auto;
@@ -852,19 +679,10 @@ onUnmounted(() => {
     gap: 12px;
     background: #f3f4f6;
 }
-.bm-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 48px 16px;
-    color: #9ca3af;
-    text-align: center;
-    gap: 8px;
-}
+.bm-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 16px; color: #9ca3af; text-align: center; gap: 8px; }
 .bm-empty-icon { width: 40px; height: 40px; }
 
-/* ── Card ─────────────────────────────────────────── */
+/* ── Card ─────────────────────────────────────── */
 .bm-card {
     background: var(--bm-card-bg);
     border: 1px solid var(--bm-card-border);
@@ -881,413 +699,221 @@ onUnmounted(() => {
     gap: 12px;
 }
 .bm-card-info { flex: 1 1 auto; min-width: 0; }
-.bm-card-top {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 2px;
-}
-.bm-bn {
-    font-weight: 600;
-    font-size: 0.95em;
-}
-.bm-card-title {
-    font-size: 0.9em;
-    color: #374151;
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.bm-card-meta {
-    font-size: 0.8em;
-    color: #6b7280;
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-}
+.bm-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.bm-bn { font-weight: 600; font-size: 0.95em; }
+.bm-card-title { font-size: 0.9em; color: #374151; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-card-meta { font-size: 0.8em; color: #6b7280; display: flex; gap: 4px; flex-wrap: wrap; }
 .bm-sep { color: #d1d5db; }
-.bm-card-counts {
-    font-size: 0.8em;
-    color: #6b7280;
-    margin-top: 4px;
-}
+.bm-card-counts { font-size: 0.8em; color: #6b7280; margin-top: 4px; }
 
-/* ── Status Pill ──────────────────────────────────── */
-.bm-status-pill {
-    display: inline-block;
-    padding: 1px 8px;
-    border-radius: 9999px;
-    font-size: 0.78em;
-    font-weight: 500;
-    background: #e5e7eb;
-    color: #374151;
-    white-space: nowrap;
-}
-.bm-status-pill--sm {
-    padding: 0 6px;
-    font-size: 0.75em;
-}
+/* ── Status Pill ──────────────────────────────── */
+.bm-status-pill { display: inline-block; padding: 1px 8px; border-radius: 9999px; font-size: 0.78em; font-weight: 500; background: #e5e7eb; color: #374151; white-space: nowrap; }
+.bm-status-pill--sm { padding: 0 6px; font-size: 0.75em; }
 
-/* ── Line Items Grid ──────────────────────────────── */
-.bm-lines-head,
-.bm-line {
+/* ── Lines Grid ───────────────────────────────── */
+.bm-lines-head, .bm-line {
     display: grid;
     grid-template-columns: 44px 1fr 110px 56px 76px 52px 36px;
     align-items: center;
     gap: 6px;
     padding: 4px 14px;
 }
-.bm-lines-head {
-    border-bottom: 1px solid var(--bm-card-border);
-    padding-top: 6px;
-    padding-bottom: 6px;
-}
-.bm-lh {
-    font-size: 0.72em;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: #9ca3af;
-    letter-spacing: 0.04em;
-}
+.bm-lines-head { border-bottom: 1px solid var(--bm-card-border); padding-top: 6px; padding-bottom: 6px; }
+.bm-lh { font-size: 0.72em; font-weight: 600; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.04em; }
+.bm-line-wrap { border-bottom: 1px solid #f3f4f6; &:last-child { border-bottom: none; } }
 .bm-line {
     background: var(--bm-line-bg);
-    border-bottom: 1px solid #f3f4f6;
     padding-top: 6px;
     padding-bottom: 6px;
     transition: background 0.15s;
     &:hover { background: var(--bm-line-hover); }
-    &:last-child { border-bottom: none; }
 }
-.bm-no-lines {
-    padding: 16px;
-    text-align: center;
-    color: #9ca3af;
-    font-size: 0.85em;
-}
+.bm-no-lines { padding: 16px; text-align: center; color: #9ca3af; font-size: 0.85em; }
 
-/* ── Line Item Cells ──────────────────────────────── */
+/* ── Line Cells ───────────────────────────────── */
 .bm-l { min-width: 0; }
-.bm-l-img {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.bm-product-img {
-    width: 36px;
-    height: 36px;
-    border-radius: 4px;
-    object-fit: cover;
-}
-.bm-img-ph {
-    width: 36px;
-    height: 36px;
-    border-radius: 4px;
-    background: #f3f4f6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #d1d5db;
-}
-.bm-l-product {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-}
-.bm-l-model {
-    font-weight: 500;
-    font-size: 0.9em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.bm-l-variant {
-    font-size: 0.78em;
-    color: #6b7280;
-}
-.bm-l-sku {
-    font-size: 0.85em;
-    font-family: monospace;
-    color: #4b5563;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.bm-l-avail {
-    font-weight: 600;
-    font-size: 0.9em;
-    text-align: center;
-    &.is-low { color: #dc2626; }
-}
+.bm-l-img { display: flex; align-items: center; justify-content: center; }
+.bm-product-img { width: 36px; height: 36px; border-radius: 4px; object-fit: cover; }
+.bm-img-ph { width: 36px; height: 36px; border-radius: 4px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; color: #d1d5db; }
+.bm-l-product { display: flex; flex-direction: column; gap: 1px; }
+.bm-l-model { font-weight: 500; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-l-variant { font-size: 0.78em; color: #6b7280; }
+.bm-l-sku { font-size: 0.85em; font-family: monospace; color: #4b5563; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-l-avail { font-weight: 600; font-size: 0.9em; text-align: center; &.is-low { color: #dc2626; } }
 .bm-l-status { text-align: center; }
-.bm-l-qty {
-    font-weight: 600;
-    font-size: 0.9em;
-    text-align: center;
-}
-.bm-l-action {
-    display: flex;
-    justify-content: center;
-}
+.bm-l-qty { font-weight: 600; font-size: 0.9em; text-align: center; }
+.bm-l-action { display: flex; justify-content: center; }
 
-/* ── Icon Button ──────────────────────────────────── */
+/* ── Icon Button ──────────────────────────────── */
 .bm-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: #6b7280;
-    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border: none; border-radius: 6px;
+    background: transparent; color: #6b7280; cursor: pointer;
     transition: background 0.15s, color 0.15s;
-    &:hover { background: #e5e7eb; color: #111827; }
+    &:hover:not(:disabled) { background: #e5e7eb; color: #111827; }
+    &:disabled { opacity: 0.35; cursor: not-allowed; }
 }
-.bm-icon-btn--light {
-    color: rgba(255,255,255,0.7);
-    &:hover { background: rgba(255,255,255,0.15); color: #fff; }
-}
+.bm-icon-btn--light { color: rgba(255,255,255,0.7); &:hover:not(:disabled) { background: rgba(255,255,255,0.15); color: #fff; } }
 .bm-icon-btn--sm { width: 24px; height: 24px; }
 
-/* ── Menu Wrap (just holds kebab button, no dropdown inside) ── */
-.bm-menu-wrap {
-    position: relative;
-    display: inline-flex;
-    flex-shrink: 0;
+/* ══════════════════════════════════════════════════
+   EXPAND ANIMATION (grid-template-rows trick)
+   ══════════════════════════════════════════════════ */
+.bm-expand-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s ease;
+}
+.bm-expand-wrap.is-open {
+    grid-template-rows: 1fr;
+}
+.bm-expand-overflow {
+    overflow: hidden;
+    min-height: 0;
 }
 
-/* ── Overlay & Modal ──────────────────────────────── */
-.bm-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 100000;
-    background: rgba(0,0,0,0.35);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
+/* ── Expand Content ───────────────────────────── */
+.bm-expand-content {
+    padding: 10px 14px;
 }
-.bm-modal {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-    padding: 24px;
-    max-width: 420px;
-    width: 100%;
+.bm-expand-bar {
+    background: #f9fafb;
+    border-bottom: 1px solid var(--bm-card-border);
 }
-.bm-modal-title {
-    margin: 0 0 8px;
-    font-size: 1.05em;
-    font-weight: 600;
+.bm-expand-line {
+    background: #fafbfc;
+    border-top: 1px solid #e5e7eb;
 }
-.bm-modal-msg {
-    margin: 0 0 20px;
-    font-size: 0.92em;
-    color: #374151;
-    white-space: pre-line;
-    line-height: 1.5;
-}
-.bm-modal-footer {
+
+/* ── Expand: Actions (horizontal right-aligned buttons) ── */
+.bm-expand-actions {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
     gap: 8px;
-    margin-top: 16px;
+    flex-wrap: wrap;
 }
 
-/* ── Buttons ──────────────────────────────────────── */
-.bm-btn {
-    padding: 8px 18px;
-    border: none;
-    border-radius: 6px;
+/* ── Expand: Confirm ──────────────────────────── */
+.bm-expand-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.bm-confirm-msg {
+    margin: 0;
     font-size: 0.9em;
+    color: #374151;
+    white-space: pre-line;
+    line-height: 1.45;
+}
+
+/* ── Expand: Status row ───────────────────────── */
+.bm-expand-status-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ── Status Chips ─────────────────────────────── */
+.bm-status-chip {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: var(--bm-act-radius);
+    font-size: 0.88em;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.bm-status-chip--attempting { background: #9ca3af; color: #fff; }
+.bm-status-chip--succeeded { background: #16a34a; color: #fff; }
+.bm-status-chip--failed { background: #fef2f2; color: #991b1b; }
+
+/* ── Action Button (customizable) ─────────────── */
+.bm-action-btn {
+    padding: 7px 16px;
+    border: none;
+    border-radius: var(--bm-act-radius);
+    font-size: 0.88em;
     font-weight: 500;
     cursor: pointer;
+    background: var(--bm-act-bg);
+    color: var(--bm-act-text);
+    white-space: nowrap;
     transition: background 0.15s;
+    &:hover:not(:disabled) { background: var(--bm-act-hover); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
-.bm-btn--cancel {
-    background: #f3f4f6;
-    color: #374151;
-    &:hover { background: #e5e7eb; }
-}
-.bm-btn--confirm {
-    background: #111827;
-    color: #fff;
-    &:hover { background: #1f2937; }
-    &:disabled {
-        background: #d1d5db;
-        color: #9ca3af;
-        cursor: not-allowed;
-    }
-}
-.bm-btn--delete {
+.bm-action-btn--danger {
     background: #dc2626;
     color: #fff;
-    &:hover { background: #b91c1c; }
+    &:hover:not(:disabled) { background: #b91c1c; }
 }
 
-/* ── Edit Quantity Modal ──────────────────────────── */
-.bm-edit-product-info {
+/* ── Secondary Button ─────────────────────────── */
+.bm-secondary-btn {
+    padding: 7px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: var(--bm-act-radius);
+    font-size: 0.88em;
+    font-weight: 500;
+    cursor: pointer;
+    background: #fff;
+    color: #374151;
+    white-space: nowrap;
+    transition: background 0.15s;
+    &:hover { background: #f3f4f6; }
+}
+
+/* ── Inline Edit (Update Qty) ─────────────────── */
+.bm-inline-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.bm-ie-header {
     display: flex;
     gap: 6px;
     align-items: baseline;
-    margin-bottom: 2px;
 }
-.bm-edit-product-model {
-    font-weight: 700;
-    font-size: 1em;
-    color: #111827;
+.bm-ie-model { font-weight: 700; font-size: 0.95em; color: #111827; }
+.bm-ie-variant { font-weight: 400; font-size: 0.9em; color: #111827; }
+.bm-ie-sku { font-size: 0.82em; color: #9ca3af; }
+.bm-ie-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
-.bm-edit-product-variant {
-    font-weight: 400;
-    font-size: 0.95em;
-    color: #111827;
-}
-.bm-edit-product-sku {
-    font-size: 0.85em;
-    color: #9ca3af;
-    margin-bottom: 16px;
-}
-.bm-edit-field {
-    margin-bottom: 12px;
-}
-.bm-edit-label {
-    display: block;
-    font-size: 0.82em;
-    font-weight: 500;
-    color: #6b7280;
-    margin-bottom: 4px;
-}
-.bm-edit-input {
-    width: 100%;
-    padding: 8px 10px;
+.bm-ie-label { font-size: 0.82em; font-weight: 500; color: #6b7280; white-space: nowrap; }
+.bm-ie-input {
+    width: 80px;
+    padding: 6px 8px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
-    font-size: 1em;
+    font-size: 0.95em;
     outline: none;
-    transition: border-color 0.15s;
     &:focus { border-color: #6366f1; }
 }
-.bm-edit-avail {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    border-radius: 6px;
+.bm-ie-avail {
+    font-size: 0.85em;
+    padding: 4px 10px;
+    border-radius: 4px;
     background: #f0fdf4;
-    font-size: 0.9em;
     color: #166534;
+    &.is-neg { background: #fef2f2; color: #991b1b; }
+    &.is-del { background: #fef2f2; color: #991b1b; }
 }
-.bm-edit-avail--neg {
-    background: #fef2f2;
-    color: #991b1b;
-}
-.bm-edit-avail--del {
-    background: #fef2f2;
-    color: #991b1b;
-}
-.bm-edit-err {
-    margin: 8px 0 0;
-    font-size: 0.82em;
-    color: #dc2626;
-    font-weight: 500;
-}
+.bm-ie-err { margin: 0; font-size: 0.8em; color: #dc2626; font-weight: 500; }
 
-/* ── Transitions ──────────────────────────────────── */
-.bm-fade-enter-active,
-.bm-fade-leave-active {
-    transition: opacity 0.2s ease;
-}
-.bm-fade-enter-from,
-.bm-fade-leave-to {
-    opacity: 0;
-}
-.bm-drop-enter-active {
-    transition: opacity 0.15s ease, transform 0.15s ease;
-}
-.bm-drop-leave-active {
-    transition: opacity 0.1s ease, transform 0.1s ease;
-}
-.bm-drop-enter-from,
-.bm-drop-leave-to {
-    opacity: 0;
-    transform: translateY(-4px);
-}
-
-/* ── Responsive ───────────────────────────────────── */
+/* ── Responsive ───────────────────────────────── */
 @media (max-width: 640px) {
-    .bm-lines-head,
-    .bm-line {
-        grid-template-columns: 36px 1fr 80px 44px 60px 40px 28px;
-        gap: 4px;
-        padding-left: 8px;
-        padding-right: 8px;
-    }
-    .bm-product-img,
-    .bm-img-ph {
-        width: 28px;
-        height: 28px;
-    }
+    .bm-lines-head, .bm-line { grid-template-columns: 36px 1fr 80px 44px 60px 40px 28px; gap: 4px; padding-left: 8px; padding-right: 8px; }
+    .bm-product-img, .bm-img-ph { width: 28px; height: 28px; }
     .bm-global-header { padding: 10px 12px; }
     .bm-body { padding: 8px; gap: 8px; }
     .bm-card-head { padding: 10px; }
-}
-</style>
-
-<style>
-/* Unscoped: dropdown is teleported to <body>, needs global styles */
-.bm-dropdown-fixed {
-    min-width: 180px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    padding: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 13px;
-}
-.bm-dropdown-fixed .bm-dd-item {
-    display: block;
-    width: 100%;
-    padding: 7px 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.88em;
-    font-weight: 500;
-    text-align: left;
-    cursor: pointer;
-    background: var(--bm-dd-btn, #111827);
-    color: #fff;
-    transition: background 0.15s, opacity 0.15s;
-    white-space: nowrap;
-}
-.bm-dropdown-fixed .bm-dd-item:hover:not(:disabled) {
-    filter: brightness(1.15);
-}
-.bm-dropdown-fixed .bm-dd-item:disabled {
-    cursor: not-allowed;
-}
-.bm-dropdown-fixed .bm-dd-item--attempting {
-    background: #9ca3af;
-}
-.bm-dropdown-fixed .bm-dd-item--attempting:hover {
-    background: #9ca3af;
-}
-.bm-dropdown-fixed .bm-dd-item--succeeded {
-    background: #16a34a;
-}
-.bm-dropdown-fixed .bm-dd-item--succeeded:hover {
-    background: #16a34a;
-}
-.bm-dropdown-fixed .bm-dd-item--failed {
-    background: #dc2626;
-    cursor: pointer;
-}
-.bm-dropdown-fixed .bm-dd-item--failed:hover {
-    background: #b91c1c;
+    .bm-expand-content { padding: 8px 10px; }
 }
 </style>

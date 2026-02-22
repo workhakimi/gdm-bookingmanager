@@ -37,13 +37,22 @@ export default {
                     'lineHoverColor',
                     'globalHeaderBgColor',
                     'globalHeaderTextColor',
-                    'dropdownBtnColor',
                 ],
             },
             {
                 label: 'Shape',
                 isCollapsible: true,
                 properties: ['cardBorderRadius'],
+            },
+            {
+                label: 'Action Buttons',
+                isCollapsible: true,
+                properties: [
+                    'actionBtnColor',
+                    'actionBtnTextColor',
+                    'actionBtnHoverColor',
+                    'actionBtnRadius',
+                ],
             },
             {
                 label: 'Typography',
@@ -89,8 +98,7 @@ export default {
             /* wwEditor:start */
             bindingValidation: {
                 type: 'array',
-                tooltip:
-                    'Array of SKU objects: { sku, type, model, color, size, tags, snt, booked, balance, imagelink }',
+                tooltip: 'Array of SKU objects: { sku, type, model, color, size, tags, snt, booked, balance, imagelink }',
             },
             /* wwEditor:end */
         },
@@ -103,8 +111,7 @@ export default {
             /* wwEditor:start */
             bindingValidation: {
                 type: 'array',
-                tooltip:
-                    'Array of booking header objects: { id, bookingnumber, created_at, bookingtitle, pic_id, status, unique_skus, total_quantity }',
+                tooltip: 'Array of booking header objects: { id, bookingnumber, created_at, bookingtitle, pic_id, status, unique_skus, total_quantity }',
             },
             /* wwEditor:end */
         },
@@ -117,8 +124,7 @@ export default {
             /* wwEditor:start */
             bindingValidation: {
                 type: 'array',
-                tooltip:
-                    'Flat array of line items: { header_id, sku, quantity, status, line_id? }',
+                tooltip: 'Flat array of line items: { header_id, sku, quantity, status, line_id? }',
             },
             /* wwEditor:end */
         },
@@ -131,8 +137,7 @@ export default {
             /* wwEditor:start */
             bindingValidation: {
                 type: 'array',
-                tooltip:
-                    'Array of PIC objects: { id, name } to resolve pic_id to display name',
+                tooltip: 'Array of PIC objects: { id, name } to resolve pic_id to display name',
             },
             /* wwEditor:end */
         },
@@ -145,8 +150,7 @@ export default {
             /* wwEditor:start */
             bindingValidation: {
                 type: 'object',
-                tooltip:
-                    'Two-way staging variable. Component reads staging_status for backend results. Shape: { action, staging_status, booking_header, booking_items, request_id?, error_message? }',
+                tooltip: 'Two-way staging variable. Shape: { action, staging_status, booking_header, booking_items, request_id?, error_message? }',
             },
             /* wwEditor:end */
         },
@@ -157,10 +161,7 @@ export default {
             defaultValue: 'header_id',
             options: { placeholder: 'header_id' },
             /* wwEditor:start */
-            propertyHelp: {
-                tooltip:
-                    'The field in line items that references the booking header id (e.g. header_id, headerid).',
-            },
+            propertyHelp: { tooltip: 'The field in line items that references the booking header id (e.g. header_id, headerid).' },
             /* wwEditor:end */
         },
         headerStatusColorMap: {
@@ -171,10 +172,7 @@ export default {
             defaultValue: {},
             options: { placeholder: '{ "Booked": "#dbeafe", "Confirmed": "#d1fae5" }' },
             /* wwEditor:start */
-            bindingValidation: {
-                type: 'object',
-                tooltip: 'Map of header status value to CSS background color',
-            },
+            bindingValidation: { type: 'object', tooltip: 'Map of header status value to CSS background color' },
             /* wwEditor:end */
         },
         lineItemStatusColorMap: {
@@ -185,84 +183,54 @@ export default {
             defaultValue: {},
             options: { placeholder: '{ "Booked": "#dbeafe", "Pending": "#fef3c7" }' },
             /* wwEditor:start */
-            bindingValidation: {
-                type: 'object',
-                tooltip: 'Map of line item status value to CSS background color',
-            },
+            bindingValidation: { type: 'object', tooltip: 'Map of line item status value to CSS background color' },
             /* wwEditor:end */
         },
 
-        cardBgColor: {
-            label: { en: 'Card background' },
-            type: 'Color',
-            section: 'style',
-            defaultValue: '#ffffff',
-        },
-        cardBorderColor: {
-            label: { en: 'Card border' },
-            type: 'Color',
-            section: 'style',
-            defaultValue: '#e5e7eb',
-        },
-        headerBgColor: {
-            label: { en: 'Card header background' },
-            type: 'Color',
-            section: 'style',
-            defaultValue: '#f9fafb',
-        },
-        lineBgColor: {
-            label: { en: 'Line item background' },
-            type: 'Color',
-            section: 'style',
-            defaultValue: '#ffffff',
-        },
-        lineHoverColor: {
-            label: { en: 'Line item hover' },
-            type: 'Color',
-            section: 'style',
-            defaultValue: '#f3f4f6',
-        },
-        globalHeaderBgColor: {
-            label: { en: 'Global header background' },
-            type: 'Color',
-            section: 'style',
-            defaultValue: '#111827',
-        },
-        globalHeaderTextColor: {
-            label: { en: 'Global header text' },
-            type: 'Color',
-            section: 'style',
-            defaultValue: '#ffffff',
-        },
-        dropdownBtnColor: {
-            label: { en: 'Dropdown button color' },
-            type: 'Color',
-            section: 'style',
-            defaultValue: '#111827',
-            /* wwEditor:start */
-            propertyHelp: {
-                tooltip: 'Background color for action buttons in dropdown menus (idle state).',
-            },
-            /* wwEditor:end */
-        },
+        cardBgColor: { label: { en: 'Card background' }, type: 'Color', section: 'style', defaultValue: '#ffffff' },
+        cardBorderColor: { label: { en: 'Card border' }, type: 'Color', section: 'style', defaultValue: '#e5e7eb' },
+        headerBgColor: { label: { en: 'Card header background' }, type: 'Color', section: 'style', defaultValue: '#f9fafb' },
+        lineBgColor: { label: { en: 'Line item background' }, type: 'Color', section: 'style', defaultValue: '#ffffff' },
+        lineHoverColor: { label: { en: 'Line item hover' }, type: 'Color', section: 'style', defaultValue: '#f3f4f6' },
+        globalHeaderBgColor: { label: { en: 'Global header background' }, type: 'Color', section: 'style', defaultValue: '#111827' },
+        globalHeaderTextColor: { label: { en: 'Global header text' }, type: 'Color', section: 'style', defaultValue: '#ffffff' },
         cardBorderRadius: {
             label: { en: 'Card border radius' },
             type: 'Text',
             section: 'style',
             defaultValue: '8px',
             options: { placeholder: '8px' },
-            /* wwEditor:start */
-            propertyHelp: {
-                tooltip: 'CSS border-radius for booking cards (e.g. 8px, 12px, 0).',
-            },
-            /* wwEditor:end */
+        },
+        actionBtnColor: {
+            label: { en: 'Action button color' },
+            type: 'Color',
+            section: 'style',
+            defaultValue: '#111827',
+        },
+        actionBtnTextColor: {
+            label: { en: 'Action button text' },
+            type: 'Color',
+            section: 'style',
+            defaultValue: '#ffffff',
+        },
+        actionBtnHoverColor: {
+            label: { en: 'Action button hover' },
+            type: 'Color',
+            section: 'style',
+            defaultValue: '#1f2937',
+        },
+        actionBtnRadius: {
+            label: { en: 'Action button radius' },
+            type: 'Text',
+            section: 'style',
+            defaultValue: '6px',
+            options: { placeholder: '6px' },
         },
         fontFamily: {
             label: { en: 'Font family' },
             type: 'FontFamily',
             section: 'style',
-            defaultValue:
-                "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            defaultValue: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         },
         fontSize: {
             label: { en: 'Base font size' },
@@ -270,9 +238,7 @@ export default {
             section: 'style',
             responsive: true,
             defaultValue: '13px',
-            options: {
-                unitChoices: [{ value: 'px', label: 'px', min: 10, max: 20 }],
-            },
+            options: { unitChoices: [{ value: 'px', label: 'px', min: 10, max: 20 }] },
         },
     },
 };
