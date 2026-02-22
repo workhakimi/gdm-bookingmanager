@@ -691,6 +691,7 @@ onUnmounted(() => {
     color: #1f2937;
     line-height: 1.45;
     box-sizing: border-box;
+    overflow: visible;
     *, *::before, *::after { box-sizing: inherit; }
 }
 
@@ -703,6 +704,10 @@ onUnmounted(() => {
     background: var(--bm-global-bg);
     color: var(--bm-global-text);
     flex-shrink: 0;
+    overflow: visible;
+}
+.bm-global-right {
+    overflow: visible;
 }
 .bm-global-left {
     display: flex;
@@ -726,6 +731,7 @@ onUnmounted(() => {
 .bm-body {
     flex: 1 1 auto;
     overflow-y: auto;
+    overflow-x: visible;
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -749,7 +755,7 @@ onUnmounted(() => {
     background: var(--bm-card-bg);
     border: 1px solid var(--bm-card-border);
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible;
 }
 .bm-card-head {
     display: flex;
@@ -759,6 +765,7 @@ onUnmounted(() => {
     background: var(--bm-header-bg);
     border-bottom: 1px solid var(--bm-card-border);
     gap: 12px;
+    overflow: visible;
 }
 .bm-card-info { flex: 1 1 auto; min-width: 0; }
 .bm-card-top {
@@ -908,6 +915,7 @@ onUnmounted(() => {
 .bm-l-action {
     display: flex;
     justify-content: center;
+    overflow: visible;
 }
 
 /* ── Icon Button ──────────────────────────────────── */
@@ -936,12 +944,14 @@ onUnmounted(() => {
     position: relative;
     display: inline-flex;
     flex-shrink: 0;
+    overflow: visible;
 }
 .bm-dropdown {
     position: absolute;
     top: calc(100% + 4px);
-    left: 0;
-    z-index: 30;
+    right: 0;
+    left: auto;
+    z-index: 9999;
     min-width: 180px;
     background: #fff;
     border: 1px solid #e5e7eb;
@@ -951,8 +961,12 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    overflow: visible;
 }
-.bm-dropdown--right { left: auto; right: 0; }
+.bm-dropdown--right {
+    left: auto;
+    right: 0;
+}
 
 /* ── Dropdown Item (Action Buttons) ───────────────── */
 .bm-dd-item {
