@@ -8,25 +8,13 @@
             </div>
             <div class="bm-global-right">
                 <div v-if="headers.length >= 2" class="bm-menu-wrap">
-                    <button class="bm-icon-btn bm-icon-btn--light" @click.stop="toggleMenu('global')">
+                    <button ref="globalMenuBtn" class="bm-icon-btn bm-icon-btn--light" @click.stop="toggleMenu('global', $event)">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                             <circle cx="8" cy="3" r="1.5" />
                             <circle cx="8" cy="8" r="1.5" />
                             <circle cx="8" cy="13" r="1.5" />
                         </svg>
                     </button>
-                    <transition name="bm-drop">
-                        <div v-if="openMenu === 'global'" class="bm-dropdown">
-                            <button
-                                class="bm-dd-item"
-                                :class="actionBtnClasses(combineKey)"
-                                :disabled="getButtonState(combineKey) === 'attempting'"
-                                @click="onCombineClick"
-                            >
-                                {{ getButtonLabel(combineKey, 'Combine Selected') }}
-                            </button>
-                        </div>
-                    </transition>
                 </div>
             </div>
         </div>
@@ -47,7 +35,10 @@
                     <div class="bm-card-info">
                         <div class="bm-card-top">
                             <span class="bm-bn">{{ hdr.bookingnumber }}</span>
-                            <span class="bm-status-pill">{{ hdr.status || '-' }}</span>
+                            <span
+                                class="bm-status-pill"
+                                :style="headerStatusStyle(hdr.status)"
+                            >{{ hdr.status || '-' }}</span>
                         </div>
                         <div class="bm-card-title">{{ hdr.bookingtitle || '-' }}</div>
                         <div class="bm-card-meta">
@@ -60,25 +51,13 @@
                         </div>
                     </div>
                     <div class="bm-menu-wrap">
-                        <button class="bm-icon-btn" @click.stop="toggleMenu(`h:${hdr.id}`)">
+                        <button class="bm-icon-btn" @click.stop="toggleMenu(`h:${hdr.id}`, $event)">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                                 <circle cx="8" cy="3" r="1.5" />
                                 <circle cx="8" cy="8" r="1.5" />
                                 <circle cx="8" cy="13" r="1.5" />
                             </svg>
                         </button>
-                        <transition name="bm-drop">
-                            <div v-if="openMenu === `h:${hdr.id}`" class="bm-dropdown">
-                                <button
-                                    class="bm-dd-item"
-                                    :class="actionBtnClasses(`delete_header:${hdr.id}`)"
-                                    :disabled="getButtonState(`delete_header:${hdr.id}`) === 'attempting'"
-                                    @click="onDeleteHeaderClick(hdr)"
-                                >
-                                    {{ getButtonLabel(`delete_header:${hdr.id}`, 'Release Booking') }}
-                                </button>
-                            </div>
-                        </transition>
                     </div>
                 </div>
 
@@ -112,38 +91,21 @@
                     <div class="bm-l bm-l-sku">{{ item.sku }}</div>
                     <div class="bm-l bm-l-avail" :class="{ 'is-low': item.balance <= 0 }">{{ item.balance }}</div>
                     <div class="bm-l bm-l-status">
-                        <span class="bm-status-pill bm-status-pill--sm">{{ item.status || '-' }}</span>
+                        <span
+                            class="bm-status-pill bm-status-pill--sm"
+                            :style="lineStatusStyle(item.status)"
+                        >{{ item.status || '-' }}</span>
                     </div>
                     <div class="bm-l bm-l-qty">{{ item.quantity }}</div>
                     <div class="bm-l bm-l-action">
                         <div class="bm-menu-wrap">
-                            <button class="bm-icon-btn bm-icon-btn--sm" @click.stop="toggleMenu(`l:${hdr.id}:${item._key}`)">
+                            <button class="bm-icon-btn bm-icon-btn--sm" @click.stop="toggleMenu(`l:${hdr.id}:${item._key}`, $event)">
                                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                                     <circle cx="8" cy="3" r="1.5" />
                                     <circle cx="8" cy="8" r="1.5" />
                                     <circle cx="8" cy="13" r="1.5" />
                                 </svg>
                             </button>
-                            <transition name="bm-drop">
-                                <div v-if="openMenu === `l:${hdr.id}:${item._key}`" class="bm-dropdown bm-dropdown--right">
-                                    <button
-                                        class="bm-dd-item"
-                                        :class="actionBtnClasses(`delete_lineitem:${hdr.id}:${item.sku}`)"
-                                        :disabled="getButtonState(`delete_lineitem:${hdr.id}:${item.sku}`) === 'attempting'"
-                                        @click="onDeleteLineClick(hdr, item)"
-                                    >
-                                        {{ getButtonLabel(`delete_lineitem:${hdr.id}:${item.sku}`, 'Release Line') }}
-                                    </button>
-                                    <button
-                                        class="bm-dd-item"
-                                        :class="actionBtnClasses(`updatequantity:${hdr.id}:${item.sku}`)"
-                                        :disabled="getButtonState(`updatequantity:${hdr.id}:${item.sku}`) === 'attempting'"
-                                        @click="onUpdateQtyClick(hdr, item)"
-                                    >
-                                        {{ getButtonLabel(`updatequantity:${hdr.id}:${item.sku}`, 'Update Quantity') }}
-                                    </button>
-                                </div>
-                            </transition>
                         </div>
                     </div>
                 </div>
@@ -151,6 +113,60 @@
                 <div v-if="!hdr.items.length" class="bm-no-lines">No line items</div>
             </div>
         </div>
+
+        <!-- ═══════════ FIXED DROPDOWN (position:fixed, escapes all containers) ═══════════ -->
+        <teleport to="body">
+            <transition name="bm-drop">
+                <div
+                    v-if="openMenu"
+                    class="bm-dropdown-fixed"
+                    :style="dropdownPos"
+                    @click.stop
+                >
+                    <!-- Global menu -->
+                    <template v-if="openMenu === 'global'">
+                        <button
+                            class="bm-dd-item"
+                            :class="actionBtnClasses(combineKey)"
+                            :disabled="getButtonState(combineKey) === 'attempting'"
+                            @click="onCombineClick"
+                        >
+                            {{ getButtonLabel(combineKey, 'Combine Selected') }}
+                        </button>
+                    </template>
+                    <!-- Header menu -->
+                    <template v-else-if="openMenuCtx?.type === 'header'">
+                        <button
+                            class="bm-dd-item"
+                            :class="actionBtnClasses(`delete_header:${openMenuCtx.hdr.id}`)"
+                            :disabled="getButtonState(`delete_header:${openMenuCtx.hdr.id}`) === 'attempting'"
+                            @click="onDeleteHeaderClick(openMenuCtx.hdr)"
+                        >
+                            {{ getButtonLabel(`delete_header:${openMenuCtx.hdr.id}`, 'Release Booking') }}
+                        </button>
+                    </template>
+                    <!-- Line menu -->
+                    <template v-else-if="openMenuCtx?.type === 'line'">
+                        <button
+                            class="bm-dd-item"
+                            :class="actionBtnClasses(`delete_lineitem:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`)"
+                            :disabled="getButtonState(`delete_lineitem:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`) === 'attempting'"
+                            @click="onDeleteLineClick(openMenuCtx.hdr, openMenuCtx.item)"
+                        >
+                            {{ getButtonLabel(`delete_lineitem:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`, 'Release Line') }}
+                        </button>
+                        <button
+                            class="bm-dd-item"
+                            :class="actionBtnClasses(`updatequantity:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`)"
+                            :disabled="getButtonState(`updatequantity:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`) === 'attempting'"
+                            @click="onUpdateQtyClick(openMenuCtx.hdr, openMenuCtx.item)"
+                        >
+                            {{ getButtonLabel(`updatequantity:${openMenuCtx.hdr.id}:${openMenuCtx.item.sku}`, 'Update Quantity') }}
+                        </button>
+                    </template>
+                </div>
+            </transition>
+        </teleport>
 
         <!-- ═══════════ CONFIRMATION MODAL ═══════════ -->
         <transition name="bm-fade">
@@ -171,10 +187,11 @@
             <div v-if="editState" class="bm-overlay" @click.self="closeEdit">
                 <div class="bm-modal">
                     <h3 class="bm-modal-title">Update Quantity</h3>
-                    <div class="bm-edit-meta">
-                        <span class="bm-edit-sku">{{ editState.item.sku }}</span>
-                        <span class="bm-edit-model">{{ editState.item.model || 'Unknown' }}</span>
+                    <div class="bm-edit-product-info">
+                        <span class="bm-edit-product-model">{{ editState.item.model || 'Unknown' }}</span>
+                        <span class="bm-edit-product-variant">{{ editProductVariant }}</span>
                     </div>
+                    <div class="bm-edit-product-sku">{{ editState.item.sku }}</div>
                     <div class="bm-edit-field">
                         <label class="bm-edit-label">New Quantity</label>
                         <input
@@ -184,14 +201,27 @@
                             min="0"
                         />
                     </div>
-                    <div class="bm-edit-avail" :class="{ 'bm-edit-avail--neg': editAvailability < 0 }">
+                    <div v-if="editState.desiredQty > 0" class="bm-edit-avail" :class="{ 'bm-edit-avail--neg': editAvailability < 0 }">
                         <span>Availability after Update</span>
                         <strong>{{ editAvailability }}</strong>
                     </div>
-                    <p v-if="editAvailability < 0" class="bm-edit-err">Cannot exceed available stock</p>
+                    <div v-else class="bm-edit-avail bm-edit-avail--del">
+                        <span>Setting quantity to 0 will delete this line item</span>
+                    </div>
+                    <p v-if="editAvailability < 0 && editState.desiredQty > 0" class="bm-edit-err">Cannot exceed available stock</p>
                     <div class="bm-modal-footer">
                         <button class="bm-btn bm-btn--cancel" @click="closeEdit">Cancel</button>
-                        <button class="bm-btn bm-btn--confirm" :disabled="editAvailability < 0" @click="onEditSubmit">Submit</button>
+                        <button
+                            v-if="editState.desiredQty > 0"
+                            class="bm-btn bm-btn--confirm"
+                            :disabled="editAvailability < 0"
+                            @click="onEditSubmit"
+                        >Submit</button>
+                        <button
+                            v-else
+                            class="bm-btn bm-btn--delete"
+                            @click="onEditDeleteSubmit"
+                        >Delete Line Item</button>
                     </div>
                 </div>
             </div>
@@ -200,7 +230,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue';
 
 const props = defineProps({
     content: { type: Object, required: true },
@@ -276,6 +306,26 @@ const stagingData = computed(() => {
 });
 const lineItemFK = computed(() => props.content?.lineItemHeaderKey || 'header_id');
 
+// ── Status Color Maps ──────────────────────────────────────
+
+const headerStatusColors = computed(() => {
+    const raw = props.content?.headerStatusColorMap;
+    return (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+});
+const lineItemStatusColors = computed(() => {
+    const raw = props.content?.lineItemStatusColorMap;
+    return (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+});
+
+function headerStatusStyle(status) {
+    const bg = headerStatusColors.value[status];
+    return bg ? { background: bg } : {};
+}
+function lineStatusStyle(status) {
+    const bg = lineItemStatusColors.value[status];
+    return bg ? { background: bg } : {};
+}
+
 // ── Memoized Lookups ───────────────────────────────────────
 
 const refLookup = computed(() => {
@@ -344,24 +394,63 @@ const selectionSummary = computed(() => {
 const rootStyles = computed(() => ({
     '--bm-card-bg': props.content?.cardBgColor || '#ffffff',
     '--bm-card-border': props.content?.cardBorderColor || '#e5e7eb',
+    '--bm-card-radius': props.content?.cardBorderRadius || '8px',
     '--bm-header-bg': props.content?.headerBgColor || '#f9fafb',
     '--bm-line-bg': props.content?.lineBgColor || '#ffffff',
     '--bm-line-hover': props.content?.lineHoverColor || '#f3f4f6',
     '--bm-global-bg': props.content?.globalHeaderBgColor || '#111827',
     '--bm-global-text': props.content?.globalHeaderTextColor || '#ffffff',
+    '--bm-dd-btn': props.content?.dropdownBtnColor || '#111827',
     '--bm-font': props.content?.fontFamily || "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     '--bm-font-size': props.content?.fontSize || '13px',
 }));
 
-// ── Dropdown Menu State ────────────────────────────────────
+// ── Dropdown Menu State (position:fixed approach) ──────────
 
 const openMenu = ref(null);
+const openMenuCtx = ref(null);
+const dropdownPos = ref({});
 
-function toggleMenu(key) {
-    openMenu.value = openMenu.value === key ? null : key;
+function toggleMenu(key, event) {
+    if (openMenu.value === key) {
+        closeAllMenus();
+        return;
+    }
+
+    const btn = event.currentTarget;
+    const rect = btn.getBoundingClientRect();
+
+    // Parse context from key
+    let ctx = null;
+    if (key.startsWith('h:')) {
+        const hdrId = key.slice(2);
+        ctx = { type: 'header', hdr: resolvedHeaders.value.find(h => h.id === hdrId) };
+    } else if (key.startsWith('l:')) {
+        const parts = key.split(':');
+        const hdrId = parts[1];
+        const itemKey = parts.slice(2).join(':');
+        const hdr = resolvedHeaders.value.find(h => h.id === hdrId);
+        const item = hdr?.items?.find(i => i._key === itemKey);
+        ctx = { type: 'line', hdr, item };
+    }
+
+    openMenuCtx.value = ctx;
+    openMenu.value = key;
+
+    nextTick(() => {
+        dropdownPos.value = {
+            position: 'fixed',
+            top: `${rect.bottom + 4}px`,
+            right: `${window.innerWidth - rect.right}px`,
+            zIndex: 99999,
+            '--bm-dd-btn': props.content?.dropdownBtnColor || '#111827',
+        };
+    });
 }
+
 function closeAllMenus() {
     openMenu.value = null;
+    openMenuCtx.value = null;
 }
 
 // ── Pending Actions & Button State ─────────────────────────
@@ -396,7 +485,6 @@ function actionBtnClasses(key) {
     };
 }
 
-// Combine key for global action
 const combineKey = computed(() => getPendingKey('combine_selected', 'all'));
 
 // ── Dispatch & Retry ───────────────────────────────────────
@@ -506,6 +594,11 @@ const editAvailability = computed(() => {
     return editState.value.balance + editState.value.originalQty - (editState.value.desiredQty ?? 0);
 });
 
+const editProductVariant = computed(() => {
+    if (!editState.value) return '';
+    return [editState.value.item.color, editState.value.item.size].filter(Boolean).join(' · ') || '';
+});
+
 function closeEdit() {
     editState.value = null;
 }
@@ -521,7 +614,6 @@ function onCombineClick() {
     const firstHdr = resolvedHeaders.value[0];
     if (!firstHdr) return;
 
-    // Capture snapshot at confirmation-open time (§7 gotcha 1)
     const snapshotHeader = deepClone(firstHdr);
     const snapshotAllItems = resolvedHeaders.value.flatMap(h =>
         (h.items || []).map(i => cleanItem(i))
@@ -626,7 +718,6 @@ function onEditSubmit() {
     const desiredQty = editState.value.desiredQty;
     const originalQty = editState.value.originalQty;
 
-    // Snapshot items at confirmation-open time, with target qty replaced
     const snapshotHeader = deepClone(hdr);
     const snapshotItems = (headerItemsMap.value[hdr.id] || []).map(i => {
         const c = cleanItem(i);
@@ -647,6 +738,35 @@ function onEditSubmit() {
             dispatchAction(key, {
                 action: 'updatequantity',
                 is_edit: true,
+                booking_header: cleanHeader(snapshotHeader),
+                booking_items: snapshotItems,
+                target: {
+                    header_id: hdr.id,
+                    sku: item.sku,
+                    ...(item.line_id ? { line_id: item.line_id } : {}),
+                },
+            });
+        },
+    };
+}
+
+function onEditDeleteSubmit() {
+    const hdr = editState.value.header;
+    const item = editState.value.item;
+
+    const snapshotHeader = deepClone(hdr);
+    const snapshotItems = (hdr.items || []).map(i => cleanItem(i));
+
+    closeEdit();
+
+    confirmState.value = {
+        title: 'Delete Line Item',
+        message: `This will delete ${item.sku} from booking ${hdr.bookingnumber}.`,
+        onConfirm: () => {
+            const key = getPendingKey('delete_lineitem', hdr.id, item.sku);
+            dispatchAction(key, {
+                action: 'delete_lineitem',
+                is_edit: false,
                 booking_header: cleanHeader(snapshotHeader),
                 booking_items: snapshotItems,
                 target: {
@@ -691,7 +811,6 @@ onUnmounted(() => {
     color: #1f2937;
     line-height: 1.45;
     box-sizing: border-box;
-    overflow: visible;
     *, *::before, *::after { box-sizing: inherit; }
 }
 
@@ -704,10 +823,6 @@ onUnmounted(() => {
     background: var(--bm-global-bg);
     color: var(--bm-global-text);
     flex-shrink: 0;
-    overflow: visible;
-}
-.bm-global-right {
-    overflow: visible;
 }
 .bm-global-left {
     display: flex;
@@ -731,7 +846,6 @@ onUnmounted(() => {
 .bm-body {
     flex: 1 1 auto;
     overflow-y: auto;
-    overflow-x: visible;
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -754,8 +868,8 @@ onUnmounted(() => {
 .bm-card {
     background: var(--bm-card-bg);
     border: 1px solid var(--bm-card-border);
-    border-radius: 8px;
-    overflow: visible;
+    border-radius: var(--bm-card-radius);
+    overflow: hidden;
 }
 .bm-card-head {
     display: flex;
@@ -765,7 +879,6 @@ onUnmounted(() => {
     background: var(--bm-header-bg);
     border-bottom: 1px solid var(--bm-card-border);
     gap: 12px;
-    overflow: visible;
 }
 .bm-card-info { flex: 1 1 auto; min-width: 0; }
 .bm-card-top {
@@ -915,7 +1028,6 @@ onUnmounted(() => {
 .bm-l-action {
     display: flex;
     justify-content: center;
-    overflow: visible;
 }
 
 /* ── Icon Button ──────────────────────────────────── */
@@ -939,75 +1051,18 @@ onUnmounted(() => {
 }
 .bm-icon-btn--sm { width: 24px; height: 24px; }
 
-/* ── Dropdown Menu ────────────────────────────────── */
+/* ── Menu Wrap (just holds kebab button, no dropdown inside) ── */
 .bm-menu-wrap {
     position: relative;
     display: inline-flex;
     flex-shrink: 0;
-    overflow: visible;
-}
-.bm-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    left: auto;
-    z-index: 9999;
-    min-width: 180px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    padding: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    overflow: visible;
-}
-.bm-dropdown--right {
-    left: auto;
-    right: 0;
-}
-
-/* ── Dropdown Item (Action Buttons) ───────────────── */
-.bm-dd-item {
-    display: block;
-    width: 100%;
-    padding: 7px 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.88em;
-    font-weight: 500;
-    text-align: left;
-    cursor: pointer;
-    background: #111827;
-    color: #fff;
-    transition: background 0.15s, opacity 0.15s;
-    white-space: nowrap;
-    &:hover:not(:disabled) { background: #1f2937; }
-    &:disabled { cursor: not-allowed; }
-}
-.bm-dd-item--attempting {
-    background: #9ca3af;
-    color: #fff;
-    &:hover { background: #9ca3af; }
-}
-.bm-dd-item--succeeded {
-    background: #16a34a;
-    color: #fff;
-    &:hover { background: #16a34a; }
-}
-.bm-dd-item--failed {
-    background: #dc2626;
-    color: #fff;
-    cursor: pointer;
-    &:hover { background: #b91c1c; }
 }
 
 /* ── Overlay & Modal ──────────────────────────────── */
 .bm-overlay {
     position: fixed;
     inset: 0;
-    z-index: 50;
+    z-index: 100000;
     background: rgba(0,0,0,0.35);
     display: flex;
     align-items: center;
@@ -1066,22 +1121,33 @@ onUnmounted(() => {
         cursor: not-allowed;
     }
 }
+.bm-btn--delete {
+    background: #dc2626;
+    color: #fff;
+    &:hover { background: #b91c1c; }
+}
 
 /* ── Edit Quantity Modal ──────────────────────────── */
-.bm-edit-meta {
+.bm-edit-product-info {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: baseline;
-    margin-bottom: 16px;
+    margin-bottom: 2px;
 }
-.bm-edit-sku {
-    font-family: monospace;
-    font-weight: 600;
+.bm-edit-product-model {
+    font-weight: 700;
+    font-size: 1em;
+    color: #111827;
+}
+.bm-edit-product-variant {
+    font-weight: 400;
     font-size: 0.95em;
+    color: #111827;
 }
-.bm-edit-model {
-    font-size: 0.88em;
-    color: #6b7280;
+.bm-edit-product-sku {
+    font-size: 0.85em;
+    color: #9ca3af;
+    margin-bottom: 16px;
 }
 .bm-edit-field {
     margin-bottom: 12px;
@@ -1114,6 +1180,10 @@ onUnmounted(() => {
     color: #166534;
 }
 .bm-edit-avail--neg {
+    background: #fef2f2;
+    color: #991b1b;
+}
+.bm-edit-avail--del {
     background: #fef2f2;
     color: #991b1b;
 }
@@ -1162,5 +1232,62 @@ onUnmounted(() => {
     .bm-global-header { padding: 10px 12px; }
     .bm-body { padding: 8px; gap: 8px; }
     .bm-card-head { padding: 10px; }
+}
+</style>
+
+<style>
+/* Unscoped: dropdown is teleported to <body>, needs global styles */
+.bm-dropdown-fixed {
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+}
+.bm-dropdown-fixed .bm-dd-item {
+    display: block;
+    width: 100%;
+    padding: 7px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.88em;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    background: var(--bm-dd-btn, #111827);
+    color: #fff;
+    transition: background 0.15s, opacity 0.15s;
+    white-space: nowrap;
+}
+.bm-dropdown-fixed .bm-dd-item:hover:not(:disabled) {
+    filter: brightness(1.15);
+}
+.bm-dropdown-fixed .bm-dd-item:disabled {
+    cursor: not-allowed;
+}
+.bm-dropdown-fixed .bm-dd-item--attempting {
+    background: #9ca3af;
+}
+.bm-dropdown-fixed .bm-dd-item--attempting:hover {
+    background: #9ca3af;
+}
+.bm-dropdown-fixed .bm-dd-item--succeeded {
+    background: #16a34a;
+}
+.bm-dropdown-fixed .bm-dd-item--succeeded:hover {
+    background: #16a34a;
+}
+.bm-dropdown-fixed .bm-dd-item--failed {
+    background: #dc2626;
+    cursor: pointer;
+}
+.bm-dropdown-fixed .bm-dd-item--failed:hover {
+    background: #b91c1c;
 }
 </style>

@@ -19,6 +19,11 @@ export default {
                 isCollapsible: true,
                 properties: ['lineItemHeaderKey'],
             },
+            {
+                label: 'Status Colors',
+                isCollapsible: true,
+                properties: ['headerStatusColorMap', 'lineItemStatusColorMap'],
+            },
         ],
         customStylePropertiesOrder: [
             {
@@ -32,7 +37,13 @@ export default {
                     'lineHoverColor',
                     'globalHeaderBgColor',
                     'globalHeaderTextColor',
+                    'dropdownBtnColor',
                 ],
+            },
+            {
+                label: 'Shape',
+                isCollapsible: true,
+                properties: ['cardBorderRadius'],
             },
             {
                 label: 'Typography',
@@ -152,6 +163,34 @@ export default {
             },
             /* wwEditor:end */
         },
+        headerStatusColorMap: {
+            label: { en: 'Header status color map (JSON)' },
+            type: 'RawObject',
+            section: 'settings',
+            bindable: true,
+            defaultValue: {},
+            options: { placeholder: '{ "Booked": "#dbeafe", "Confirmed": "#d1fae5" }' },
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'object',
+                tooltip: 'Map of header status value to CSS background color',
+            },
+            /* wwEditor:end */
+        },
+        lineItemStatusColorMap: {
+            label: { en: 'Line item status color map (JSON)' },
+            type: 'RawObject',
+            section: 'settings',
+            bindable: true,
+            defaultValue: {},
+            options: { placeholder: '{ "Booked": "#dbeafe", "Pending": "#fef3c7" }' },
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'object',
+                tooltip: 'Map of line item status value to CSS background color',
+            },
+            /* wwEditor:end */
+        },
 
         cardBgColor: {
             label: { en: 'Card background' },
@@ -194,6 +233,29 @@ export default {
             type: 'Color',
             section: 'style',
             defaultValue: '#ffffff',
+        },
+        dropdownBtnColor: {
+            label: { en: 'Dropdown button color' },
+            type: 'Color',
+            section: 'style',
+            defaultValue: '#111827',
+            /* wwEditor:start */
+            propertyHelp: {
+                tooltip: 'Background color for action buttons in dropdown menus (idle state).',
+            },
+            /* wwEditor:end */
+        },
+        cardBorderRadius: {
+            label: { en: 'Card border radius' },
+            type: 'Text',
+            section: 'style',
+            defaultValue: '8px',
+            options: { placeholder: '8px' },
+            /* wwEditor:start */
+            propertyHelp: {
+                tooltip: 'CSS border-radius for booking cards (e.g. 8px, 12px, 0).',
+            },
+            /* wwEditor:end */
         },
         fontFamily: {
             label: { en: 'Font family' },
