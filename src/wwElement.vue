@@ -136,7 +136,7 @@
                             <span class="bm-l-variant">{{ [item.color, item.size].filter(Boolean).join(' · ') || '-' }}</span>
                         </div>
                         <div class="bm-l bm-l-sku">{{ item.sku }}</div>
-                        <div class="bm-l bm-l-avail" :class="{ 'is-low': item.balance <= 0 }">{{ item.balance }}</div>
+                        <div class="bm-l bm-l-avail" :class="{ 'is-low': item.balance < 0, 'is-warning': item.balance >= 0 && item.balance <= 24 }">{{ item.balance }}</div>
                         <div class="bm-l bm-l-status">
                             <span class="bm-status-pill bm-status-pill--sm" :style="lineStatusStyle(item.status)">{{ item.status || '-' }}</span>
                         </div>
@@ -183,7 +183,7 @@
                                         <div class="bm-ie-row">
                                             <label class="bm-ie-label">New Qty</label>
                                             <input type="number" class="bm-ie-input" v-model.number="editQtyValue" min="0"/>
-                                            <div class="bm-ie-avail" :class="{ 'is-neg': editAvailability < 0, 'is-del': editQtyValue === 0 }">
+                                            <div class="bm-ie-avail" :class="{ 'is-neg': editAvailability < 0, 'is-warning': editAvailability >= 0 && editAvailability <= 24 && editQtyValue > 0, 'is-del': editQtyValue === 0 }">
                                                 <template v-if="editQtyValue > 0">
                                                     Avail after: <strong>{{ editAvailability }}</strong>
                                                 </template>
@@ -739,7 +739,7 @@ onUnmounted(() => {
 .bm-l-model { font-weight: 500; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bm-l-variant { font-size: 0.78em; color: #6b7280; }
 .bm-l-sku { font-size: 0.85em; font-family: monospace; color: #4b5563; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bm-l-avail { font-weight: 600; font-size: 0.9em; text-align: center; &.is-low { color: #dc2626; } }
+.bm-l-avail { font-weight: 600; font-size: 0.9em; text-align: center; &.is-low { color: #dc2626; } &.is-warning { color: #ea580c; } }
 .bm-l-status { text-align: center; }
 .bm-l-qty { font-weight: 600; font-size: 0.9em; text-align: center; }
 .bm-l-action { display: flex; justify-content: center; }
@@ -903,6 +903,7 @@ onUnmounted(() => {
     background: #f0fdf4;
     color: #166534;
     &.is-neg { background: #fef2f2; color: #991b1b; }
+    &.is-warning { background: #fff7ed; color: #c2410c; }
     &.is-del { background: #fef2f2; color: #991b1b; }
 }
 .bm-ie-err { margin: 0; font-size: 0.8em; color: #dc2626; font-weight: 500; }
