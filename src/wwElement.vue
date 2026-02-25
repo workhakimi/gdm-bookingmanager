@@ -499,11 +499,13 @@ function dispatch(payload) {
     payload.staging_status = stagingStatus;
     payload.updated_at = updatedAt;
 
-    // updatequantity target: id (booking line item UUID from data source), sku, request_id, staging_status, updated_at, new_quantity
-    if (payload.action === 'updatequantity' && payload.target) {
-        payload.target.request_id = requestId;
-        payload.target.staging_status = stagingStatus;
-        payload.target.updated_at = updatedAt;
+    // Line-item actions: target.lineitem_id = booking line item UUID. For updatequantity we also add request_id, staging_status, updated_at on target.
+    if (payload.target) {
+        if (payload.action === 'updatequantity') {
+            payload.target.request_id = requestId;
+            payload.target.staging_status = stagingStatus;
+            payload.target.updated_at = updatedAt;
+        }
     }
 
     pendingAction.value = {
@@ -544,7 +546,7 @@ function doReleaseLine() {
     dispatch({
         action: 'delete_lineitem', is_edit: false,
         booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
-        target: { header_id: ctx.hdr.id, sku: ctx.item.sku, ...(ctx.item.line_id ? { line_id: ctx.item.line_id } : {}) },
+        target: { header_id: ctx.hdr.id, sku: ctx.item.sku, lineitem_id: ctx.item.id ?? ctx.item.line_id ?? null },
     });
 }
 
@@ -562,12 +564,11 @@ function submitUpdateQty() {
         action: 'updatequantity', is_edit: true,
         booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
         target: {
-            id: ctx.item.id ?? ctx.item.line_id ?? null,
+            lineitem_id: ctx.item.id ?? ctx.item.line_id ?? null,
             sku: ctx.item.sku,
             new_quantity: desiredQty,
         },
     });
-    // target.id = booking line item UUID from data source (not request_id). dispatch() adds request_id, staging_status, updated_at to target.
 }
 
 function submitDeleteViaQty() {
@@ -577,7 +578,7 @@ function submitDeleteViaQty() {
     dispatch({
         action: 'delete_lineitem', is_edit: false,
         booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
-        target: { header_id: ctx.hdr.id, sku: ctx.item.sku, ...(ctx.item.line_id ? { line_id: ctx.item.line_id } : {}) },
+        target: { header_id: ctx.hdr.id, sku: ctx.item.sku, lineitem_id: ctx.item.id ?? ctx.item.line_id ?? null },
     });
 }
 
