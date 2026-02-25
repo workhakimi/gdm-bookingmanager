@@ -493,9 +493,17 @@ function executeConfirm() {
 
 function dispatch(payload) {
     const requestId = generateId();
+    const stagingStatus = 'Sending';
+    const updatedAt = new Date().toISOString();
     payload.request_id = requestId;
-    payload.staging_status = 'Sending';
-    payload.updated_at = new Date().toISOString();
+    payload.staging_status = stagingStatus;
+    payload.updated_at = updatedAt;
+
+    if (payload.action === 'updatequantity' && payload.target) {
+        payload.target.request_id = requestId;
+        payload.target.staging_status = stagingStatus;
+        payload.target.updated_at = updatedAt;
+    }
 
     pendingAction.value = {
         requestId,
@@ -552,7 +560,11 @@ function submitUpdateQty() {
     dispatch({
         action: 'updatequantity', is_edit: true,
         booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
-        target: { header_id: ctx.hdr.id, sku: ctx.item.sku, ...(ctx.item.line_id ? { line_id: ctx.item.line_id } : {}) },
+        target: {
+            id: ctx.item.line_id ?? null,
+            sku: ctx.item.sku,
+            new_quantity: desiredQty,
+        },
     });
 }
 
