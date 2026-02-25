@@ -499,6 +499,7 @@ function dispatch(payload) {
     payload.staging_status = stagingStatus;
     payload.updated_at = updatedAt;
 
+    // updatequantity target: id (line_id), sku, request_id, staging_status, updated_at, new_quantity
     if (payload.action === 'updatequantity' && payload.target) {
         payload.target.request_id = requestId;
         payload.target.staging_status = stagingStatus;
@@ -566,6 +567,7 @@ function submitUpdateQty() {
             new_quantity: desiredQty,
         },
     });
+    // dispatch() adds request_id, staging_status, updated_at to target
 }
 
 function submitDeleteViaQty() {
