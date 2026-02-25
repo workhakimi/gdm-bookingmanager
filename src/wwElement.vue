@@ -370,6 +370,7 @@ const rootStyles = computed(() => ({
     '--bm-line-hover': props.content?.lineHoverColor || '#f3f4f6',
     '--bm-global-bg': props.content?.globalHeaderBgColor || '#111827',
     '--bm-global-text': props.content?.globalHeaderTextColor || '#ffffff',
+    '--bm-kebab-color': props.content?.kebabIconColor || '#6b7280',
     '--bm-font': props.content?.fontFamily || "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     '--bm-font-size': props.content?.fontSize || '13px',
     '--bm-act-bg': props.content?.actionBtnColor || '#111827',
@@ -759,16 +760,19 @@ onUnmounted(() => {
 .bm-l-qty { font-weight: 600; font-size: 0.9em; text-align: center; }
 .bm-l-action { display: flex; justify-content: center; }
 
-/* ── Icon Button ──────────────────────────────── */
+/* ── Icon Button (kebab) ──────────────────────── */
 .bm-icon-btn {
     display: inline-flex; align-items: center; justify-content: center;
     width: 28px; height: 28px; border: none; border-radius: 6px;
-    background: transparent; color: #6b7280; cursor: pointer;
+    background: transparent; color: var(--bm-kebab-color, #6b7280); cursor: pointer;
     transition: background 0.15s, color 0.15s;
-    &:hover:not(:disabled) { background: #e5e7eb; color: #111827; }
+    &:hover:not(:disabled) { background: #e5e7eb; color: var(--bm-kebab-color, #111827); }
     &:disabled { opacity: 0.35; cursor: not-allowed; }
 }
-.bm-icon-btn--light { color: rgba(255,255,255,0.7); &:hover:not(:disabled) { background: rgba(255,255,255,0.15); color: #fff; } }
+.bm-icon-btn--light {
+    color: var(--bm-kebab-color, rgba(255,255,255,0.9));
+    &:hover:not(:disabled) { background: rgba(255,255,255,0.15); color: var(--bm-kebab-color, #fff); }
+}
 .bm-icon-btn--sm { width: 24px; height: 24px; }
 
 /* ══════════════════════════════════════════════════

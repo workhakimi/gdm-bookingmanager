@@ -37,6 +37,7 @@ export default {
                     'lineHoverColor',
                     'globalHeaderBgColor',
                     'globalHeaderTextColor',
+                    'kebabIconColor',
                 ],
             },
             {
@@ -194,6 +195,7 @@ export default {
         lineHoverColor: { label: { en: 'Line item hover' }, type: 'Color', section: 'style', defaultValue: '#f3f4f6' },
         globalHeaderBgColor: { label: { en: 'Global header background' }, type: 'Color', section: 'style', defaultValue: '#111827' },
         globalHeaderTextColor: { label: { en: 'Global header text' }, type: 'Color', section: 'style', defaultValue: '#ffffff' },
+        kebabIconColor: { label: { en: 'Kebab icon color' }, type: 'Color', section: 'style', defaultValue: '#6b7280' },
         cardBorderRadius: {
             label: { en: 'Card border radius' },
             type: 'Text',
