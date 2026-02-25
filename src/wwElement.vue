@@ -636,14 +636,14 @@ watch(stagingData, (newVal) => {
     }
 }, { deep: true });
 
-// ── 60-second Timeout ──────────────────────────────────────
+// ── 5-second Timeout ───────────────────────────────────────
 
 let timeoutInterval = null;
 
 onMounted(() => {
     timeoutInterval = setInterval(() => {
         if (pendingAction.value && expandPhase.value === 'attempting') {
-            if (Date.now() - pendingAction.value.startedAt > 60000) {
+            if (Date.now() - pendingAction.value.startedAt > 5000) {
                 expandPhase.value = 'failed';
                 pendingAction.value.errorMessage = 'Timed out';
             }
