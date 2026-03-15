@@ -547,6 +547,7 @@ function startUpdateQty() {
 }
 
 function executeConfirm() {
+    console.log('[BSM] executeConfirm — pendingConfirmFn set:', !!pendingConfirmFn);
     if (pendingConfirmFn) pendingConfirmFn();
     pendingConfirmFn = null;
 }
@@ -554,6 +555,7 @@ function executeConfirm() {
 // ── Dispatch Helpers ───────────────────────────────────────
 
 function dispatch(payload) {
+    console.log('[BSM] dispatch called:', payload.action);
     const requestId = generateId();
     const stagingStatus = 'Sending';
     const updatedAt = new Date().toISOString();
@@ -583,9 +585,13 @@ function dispatch(payload) {
     scheduleActionTimeout();
 
     /* wwEditor:start */
-    if (props.wwEditorState?.isEditing) return;
+    if (props.wwEditorState?.isEditing) {
+        console.log('[BSM] emit BLOCKED — isEditing=true. Switch WeWeb to Preview mode to test.');
+        return;
+    }
     /* wwEditor:end */
 
+    console.log('[BSM] emitting actionRequest:', payload.action, payload);
     emit('trigger-event', { name: 'actionRequest', event: { value: payload } });
 }
 
