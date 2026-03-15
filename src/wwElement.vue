@@ -6,10 +6,11 @@
                 <h2 class="bm-title">Booking Manager</h2>
                 <span class="bm-summary">{{ selectionSummary }}</span>
             </div>
-            <div v-if="headers.length >= 2" class="bm-global-right">
+            <div class="bm-global-right">
                 <button
                     class="bm-icon-btn bm-icon-btn--light"
-                    :disabled="isLocked"
+                    :disabled="isLocked || headers.length < 2"
+                    :title="headers.length < 2 ? 'Select 2 or more bookings to combine' : 'Booking actions'"
                     @click="toggleExpand('global', { type: 'global' })"
                 >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
@@ -223,7 +224,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
 
 const props = defineProps({
     content: { type: Object, required: true },
@@ -267,7 +268,7 @@ function cleanItem(item) {
 }
 
 function deepClone(obj) {
-    return JSON.parse(JSON.stringify(obj));
+    return structuredClone(obj);
 }
 
 // ── Data Resolution ────────────────────────────────────────
@@ -534,6 +535,7 @@ function dispatch(payload) {
     };
 
     expandPhase.value = 'attempting';
+    scheduleActionTimeout();
 
     /* wwEditor:start */
     if (props.wwEditorState?.isEditing) return;
@@ -612,6 +614,7 @@ function doRetry() {
     pendingAction.value.errorMessage = null;
     pendingAction.value.payload = payload;
     expandPhase.value = 'attempting';
+    scheduleActionTimeout();
 
     /* wwEditor:start */
     if (props.wwEditorState?.isEditing) return;
@@ -621,6 +624,7 @@ function doRetry() {
 }
 
 function dismissFailure() {
+    clearActionTimeout();
     pendingAction.value = null;
     collapseExpand();
 }
@@ -638,14 +642,16 @@ watch(stagingData, (newVal) => {
     const reqMatch = !pa.requestId || !newVal.request_id || newVal.request_id === pa.requestId;
 
     if (actionMatch && headerMatch && reqMatch) {
+        clearActionTimeout();
         if (newVal.staging_status === 'Successful') {
             expandPhase.value = 'succeeded';
+            const delay = Math.max(500, Number(props.content?.successDismissDelay) || 3000);
             setTimeout(() => {
                 if (expandPhase.value === 'succeeded') {
                     pendingAction.value = null;
                     collapseExpand();
                 }
-            }, 3000);
+            }, delay);
         } else if (newVal.staging_status === 'Failed') {
             expandPhase.value = 'failed';
             pa.errorMessage = newVal.error_message || 'Action failed';
@@ -653,24 +659,28 @@ watch(stagingData, (newVal) => {
     }
 }, { deep: true });
 
-// ── 5-second Timeout ───────────────────────────────────────
+// ── Action Timeout ─────────────────────────────────────────
+// Scheduled per-dispatch so it fires exactly TIMEOUT_MS after the action starts.
 
-let timeoutInterval = null;
+const TIMEOUT_MS = 5000;
+let timeoutHandle = null;
 
-onMounted(() => {
-    timeoutInterval = setInterval(() => {
+function scheduleActionTimeout() {
+    clearTimeout(timeoutHandle);
+    timeoutHandle = setTimeout(() => {
         if (pendingAction.value && expandPhase.value === 'attempting') {
-            if (Date.now() - pendingAction.value.startedAt > 5000) {
-                expandPhase.value = 'failed';
-                pendingAction.value.errorMessage = 'Timed out';
-            }
+            expandPhase.value = 'failed';
+            pendingAction.value.errorMessage = 'Timed out';
         }
-    }, 5000);
-});
+    }, TIMEOUT_MS);
+}
 
-onUnmounted(() => {
-    if (timeoutInterval) clearInterval(timeoutInterval);
-});
+function clearActionTimeout() {
+    clearTimeout(timeoutHandle);
+    timeoutHandle = null;
+}
+
+onUnmounted(() => clearActionTimeout());
 </script>
 
 <style lang="scss" scoped>
