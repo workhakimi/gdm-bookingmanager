@@ -621,6 +621,8 @@ function emitUpdateQty(hdr, item) {
 }
 .bm-lines-head { border-bottom: 1px solid var(--bm-card-border); padding-top: 6px; padding-bottom: 6px; background: #f8f9fa; }
 .bm-lh { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #374151; letter-spacing: 0.03em; }
+.bm-lh-avail, .bm-lh-qty { text-align: center; }
+.bm-lh-status { text-align: center; }
 .bm-line-wrap { border-bottom: 1px solid #f3f4f6; &:last-child { border-bottom: none; } }
 .bm-line {
     background: var(--bm-line-bg);
