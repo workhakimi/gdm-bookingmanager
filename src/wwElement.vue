@@ -163,6 +163,17 @@ const emit = defineEmits(['trigger-event']);
 
 // ── Utilities ──────────────────────────────────────────────
 
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = (Math.random() * 16) | 0;
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
+}
+
+function klTimestamp() {
+    return new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Kuala_Lumpur' }).replace(' ', 'T') + '+08:00';
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
@@ -193,6 +204,13 @@ const actionResult = computed(() => {
     if (typeof resolved === 'string') return resolved;
     if (Array.isArray(resolved)) return resolved[0] || null;
     return resolved;
+});
+
+const userName = computed(() => {
+    const raw = props.content?.userName;
+    if (!raw) return 'Unknown';
+    const resolved = wwLib.wwUtils.getDataFromCollection(raw);
+    return (typeof resolved === 'string' && resolved) ? resolved : 'Unknown';
 });
 
 // ── Status Color Maps ──────────────────────────────────────
@@ -410,7 +428,9 @@ watch(actionResult, (val) => {
 function doRetry() {
     if (!pendingAction.value) return;
     const { eventName, payload } = pendingAction.value;
-    payload.updated_at = new Date().toISOString();
+    if (payload.change_log) {
+        payload.change_log.timestamp = klTimestamp();
+    }
     expandPhase.value = 'attempting';
     scheduleTimeout();
 
@@ -432,8 +452,11 @@ onUnmounted(() => clearTimeoutHandle());
 // ── Event Emitters ─────────────────────────────────────────
 
 function emitDeleteHeader(hdr) {
+    const user = userName.value;
+    const skuList = (hdr.items || []).map(i => i.sku).join(', ');
+    const itemCount = hdr.items?.length || 0;
+
     dispatch('onDeleteHeader', {
-        updated_at: new Date().toISOString(),
         booking_header: { id: hdr.id },
         booking_items: (hdr.items || []).map(i => ({
             id: i.id ?? i.line_id ?? null,
@@ -441,12 +464,21 @@ function emitDeleteHeader(hdr) {
             quantity: i.quantity,
             status: 'Released',
         })),
+        change_log: {
+            id: generateUUID(),
+            timestamp: klTimestamp(),
+            category: 'Booking',
+            action: `Booking ${hdr.bookingnumber} Released by ${user}`,
+            description: `Booking ${hdr.bookingnumber} "${hdr.bookingtitle || '-'}" released by ${user}. ${itemCount} line item(s) set to Released: ${skuList || 'none'}.`,
+            connection: hdr.id,
+        },
     });
 }
 
 function emitDeleteLineItem(hdr, item) {
+    const user = userName.value;
+
     dispatch('onDeleteLineItem', {
-        updated_at: new Date().toISOString(),
         booking_header: { id: hdr.id },
         booking_items: [{
             id: item.id ?? item.line_id ?? null,
@@ -454,20 +486,39 @@ function emitDeleteLineItem(hdr, item) {
             quantity: item.quantity,
             status: 'Released',
         }],
+        change_log: {
+            id: generateUUID(),
+            timestamp: klTimestamp(),
+            category: 'Booking',
+            action: `SKU ${item.sku} Released from ${hdr.bookingnumber} by ${user}`,
+            description: `Line item SKU ${item.sku} (qty: ${item.quantity}) released from booking ${hdr.bookingnumber} "${hdr.bookingtitle || '-'}" by ${user}. Previous status: ${item.status || '-'}.`,
+            connection: hdr.id,
+        },
     });
 }
 
 function emitUpdateQty(hdr, item) {
     if (editAvailability.value < 0 || editQtyValue.value < 1) return;
+    const user = userName.value;
+    const oldQty = item.quantity ?? 0;
+    const newQty = editQtyValue.value;
+
     dispatch('onUpdateQuantity', {
-        updated_at: new Date().toISOString(),
         booking_header: { id: hdr.id },
         booking_items: [{
             id: item.id ?? item.line_id ?? null,
             sku: item.sku,
-            quantity: editQtyValue.value,
+            quantity: newQty,
             status: item.status,
         }],
+        change_log: {
+            id: generateUUID(),
+            timestamp: klTimestamp(),
+            category: 'Booking',
+            action: `Quantity Change for ${hdr.bookingnumber} by ${user}`,
+            description: `SKU ${item.sku} quantity changed from ${oldQty} to ${newQty} in booking ${hdr.bookingnumber} "${hdr.bookingtitle || '-'}" by ${user}. Status: ${item.status || '-'}.`,
+            connection: hdr.id,
+        },
     });
 }
 </script>

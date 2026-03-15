@@ -12,6 +12,7 @@ export default {
                     'selectedLineItems',
                     'picReference',
                     'actionResult',
+                    'userName',
                 ],
             },
             {
@@ -57,23 +58,23 @@ export default {
     triggerEvents: [
         {
             name: 'onDeleteHeader',
-            label: { en: 'On Delete Header' },
+            label: { en: 'On Release Booking' },
             event: {
                 value: {
-                    updated_at: '',
                     booking_header: { id: '' },
                     booking_items: [],
+                    change_log: { id: '', timestamp: '', category: 'Booking', action: '', description: '', connection: '' },
                 },
             },
         },
         {
             name: 'onDeleteLineItem',
-            label: { en: 'On Delete Line Item' },
+            label: { en: 'On Release Line Item' },
             event: {
                 value: {
-                    updated_at: '',
                     booking_header: { id: '' },
                     booking_items: [],
+                    change_log: { id: '', timestamp: '', category: 'Booking', action: '', description: '', connection: '' },
                 },
             },
         },
@@ -82,9 +83,9 @@ export default {
             label: { en: 'On Update Quantity' },
             event: {
                 value: {
-                    updated_at: '',
                     booking_header: { id: '' },
                     booking_items: [],
+                    change_log: { id: '', timestamp: '', category: 'Booking', action: '', description: '', connection: '' },
                 },
             },
         },
@@ -153,6 +154,19 @@ export default {
             bindingValidation: {
                 type: 'string',
                 tooltip: 'Bind a variable: null = idle, "successful" = success, "failed" = failure. Set by your workflow after processing an event.',
+            },
+            /* wwEditor:end */
+        },
+        userName: {
+            label: { en: 'Current User Name' },
+            type: 'Text',
+            section: 'settings',
+            bindable: true,
+            defaultValue: '',
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'string',
+                tooltip: 'Bind to current user display name for change log entries',
             },
             /* wwEditor:end */
         },
