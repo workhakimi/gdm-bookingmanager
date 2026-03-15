@@ -187,6 +187,7 @@
                                 <div class="bm-cl-row">
                                     <span class="bm-cl-category">{{ log.category }}</span>
                                     <span class="bm-cl-action">{{ log.action }}</span>
+                                    <span class="bm-cl-time">{{ formatDate(log.timestamp) }}</span>
                                 </div>
                                 <div class="bm-cl-desc">{{ log.description }}</div>
                                 <div class="bm-cl-id">{{ log.connection }}</div>
@@ -848,6 +849,12 @@ function emitUpdateQty(hdr, item) {
     font-size: 0.82em;
     font-weight: 500;
     color: #374151;
+}
+.bm-cl-time {
+    margin-left: auto;
+    font-size: 0.72em;
+    color: #9ca3af;
+    white-space: nowrap;
 }
 .bm-cl-desc {
     font-size: 0.78em;
