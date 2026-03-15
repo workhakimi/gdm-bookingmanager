@@ -453,7 +453,6 @@ onUnmounted(() => clearTimeoutHandle());
 
 function emitDeleteHeader(hdr) {
     const user = userName.value;
-    const skuList = (hdr.items || []).map(i => i.sku).join(', ');
     const itemCount = hdr.items?.length || 0;
 
     dispatch('onDeleteHeader', {
@@ -469,7 +468,7 @@ function emitDeleteHeader(hdr) {
             timestamp: klTimestamp(),
             category: 'Booking',
             action: `Booking Released by ${user}`,
-            description: `Booking ${hdr.bookingnumber} "${hdr.bookingtitle || '-'}" released by ${user}. ${itemCount} line item(s) set to Released: ${skuList || 'none'}.`,
+            description: `In Booking ${hdr.bookingnumber}, all ${itemCount} line item(s) changed status to Released by ${user} in Booking Manager.`,
             connection: hdr.id,
         },
     });
@@ -491,7 +490,7 @@ function emitDeleteLineItem(hdr, item) {
             timestamp: klTimestamp(),
             category: 'Booking',
             action: `Item Released by ${user}`,
-            description: `Line item SKU ${item.sku} (qty: ${item.quantity}) released from booking ${hdr.bookingnumber} "${hdr.bookingtitle || '-'}" by ${user}. Previous status: ${item.status || '-'}.`,
+            description: `In Booking ${hdr.bookingnumber}, line item SKU ${item.sku} changed status from ${item.status || '-'} to Released by ${user} in Booking Manager.`,
             connection: hdr.id,
         },
     });
@@ -516,7 +515,7 @@ function emitUpdateQty(hdr, item) {
             timestamp: klTimestamp(),
             category: 'Booking',
             action: `Quantity Updated by ${user}`,
-            description: `SKU ${item.sku} quantity changed from ${oldQty} to ${newQty} in booking ${hdr.bookingnumber} "${hdr.bookingtitle || '-'}" by ${user}. Status: ${item.status || '-'}.`,
+            description: `In Booking ${hdr.bookingnumber}, line item SKU ${item.sku} quantity changed from ${oldQty} to ${newQty} by ${user} in Booking Manager.`,
             connection: hdr.id,
         },
     });
