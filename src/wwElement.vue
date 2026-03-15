@@ -55,8 +55,8 @@
                 <!-- Lines column header -->
                 <div class="bm-lines-head">
                     <span class="bm-lh bm-lh-img"></span>
-                    <span class="bm-lh bm-lh-product">Product</span>
                     <span class="bm-lh bm-lh-sku">SKU</span>
+                    <span class="bm-lh bm-lh-product">Product</span>
                     <span class="bm-lh bm-lh-avail">Avail</span>
                     <span class="bm-lh bm-lh-status">Status</span>
                     <span class="bm-lh bm-lh-qty">Qty</span>
@@ -72,11 +72,11 @@
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                             </div>
                         </div>
+                        <div class="bm-l bm-l-sku">{{ item.sku }}</div>
                         <div class="bm-l bm-l-product">
                             <span class="bm-l-model">{{ item.model || 'Unknown' }}</span>
                             <span class="bm-l-variant">{{ [item.color, item.size].filter(Boolean).join(' · ') || '-' }}</span>
                         </div>
-                        <div class="bm-l bm-l-sku">{{ item.sku }}</div>
                         <div class="bm-l bm-l-avail" :class="{ 'is-low': item.balance < 0, 'is-warning': item.balance >= 0 && item.balance <= 24 }">{{ item.balance }}</div>
                         <div class="bm-l bm-l-status">
                             <span class="bm-status-pill bm-status-pill--sm" :style="lineStatusStyle(item.status)">{{ item.status || '-' }}</span>
@@ -159,11 +159,11 @@
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
                                     </div>
                                 </div>
+                                <div class="bm-l bm-l-sku">{{ item.sku }}</div>
                                 <div class="bm-l bm-l-product">
                                     <span class="bm-l-model">{{ item.model || 'Unknown' }}</span>
                                     <span class="bm-l-variant">{{ [item.color, item.size].filter(Boolean).join(' · ') || '-' }}</span>
                                 </div>
-                                <div class="bm-l bm-l-sku">{{ item.sku }}</div>
                                 <div class="bm-l bm-l-avail">{{ item.balance }}</div>
                                 <div class="bm-l bm-l-status">
                                     <span class="bm-status-pill bm-status-pill--sm" :style="lineStatusStyle(item.status)">{{ item.status }}</span>
@@ -639,7 +639,7 @@ function emitUpdateQty(hdr, item) {
 /* ── Lines Grid ───────────────────────────────── */
 .bm-lines-head, .bm-line {
     display: grid;
-    grid-template-columns: 44px 1fr 110px 56px 76px 52px 36px;
+    grid-template-columns: 44px 150px 1fr 56px 76px 52px 36px;
     align-items: center;
     gap: 6px;
     padding: 4px 14px;
@@ -862,7 +862,7 @@ function emitUpdateQty(hdr, item) {
 
 /* ── Responsive ───────────────────────────────── */
 @media (max-width: 640px) {
-    .bm-lines-head, .bm-line { grid-template-columns: 36px 1fr 80px 44px 60px 40px 28px; gap: 4px; padding-left: 8px; padding-right: 8px; }
+    .bm-lines-head, .bm-line { grid-template-columns: 36px 110px 1fr 44px 60px 40px 28px; gap: 4px; padding-left: 8px; padding-right: 8px; }
     .bm-product-img, .bm-img-ph { width: 28px; height: 28px; }
     .bm-cards { gap: 8px; }
     .bm-card-head { padding: 8px 10px; }
