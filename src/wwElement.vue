@@ -123,8 +123,8 @@
                     <span class="bm-lh bm-lh-action"></span>
                 </div>
 
-                <!-- Line items -->
-                <div v-for="item in hdr.items" :key="item._key" class="bm-line-wrap">
+                <!-- Line items (active only) -->
+                <div v-for="item in hdr.activeItems" :key="item._key" class="bm-line-wrap">
                     <div class="bm-line">
                         <div class="bm-l bm-l-img">
                             <img v-if="item.imagelink" :src="item.imagelink" :alt="item.sku" class="bm-product-img"/>
@@ -217,7 +217,35 @@
                     </div>
                 </div>
 
-                <div v-if="!hdr.items.length" class="bm-no-lines">No line items</div>
+                <div v-if="!hdr.activeItems.length && !hdr.releasedItems.length" class="bm-no-lines">No line items</div>
+
+                <!-- Previously Released (collapsible) -->
+                <div v-if="hdr.releasedItems.length" class="bm-released-section">
+                    <button class="bm-released-toggle" @click="toggleReleased(hdr.id)">
+                        <svg class="bm-released-chevron" :class="{ 'is-open': releasedOpen[hdr.id] }" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg>
+                        <span>Previously Released ({{ hdr.releasedItems.length }})</span>
+                    </button>
+                    <div class="bm-released-wrap" :class="{ 'is-open': releasedOpen[hdr.id] }">
+                        <div class="bm-released-overflow">
+                            <div class="bm-released-list">
+                                <div v-for="item in hdr.releasedItems" :key="item._key" class="bm-released-row">
+                                    <div class="bm-released-img">
+                                        <img v-if="item.imagelink" :src="item.imagelink" :alt="item.sku" class="bm-released-thumb"/>
+                                        <div v-else class="bm-released-thumb bm-released-thumb--ph">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                                        </div>
+                                    </div>
+                                    <div class="bm-released-info">
+                                        <span class="bm-released-model">{{ item.model || 'Unknown' }}</span>
+                                        <span class="bm-released-variant">{{ [item.color, item.size].filter(Boolean).join(' · ') || '' }}</span>
+                                    </div>
+                                    <div class="bm-released-sku">{{ item.sku }}</div>
+                                    <div class="bm-released-qty">× {{ item.quantity }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -351,7 +379,7 @@ const headerItemsMap = computed(() => {
 
 const resolvedHeaders = computed(() =>
     headers.value.map(h => {
-        const items = (headerItemsMap.value[h.id] || []).map(item => {
+        const allItems = (headerItemsMap.value[h.id] || []).map(item => {
             const ref = refLookup.value[item.sku];
             return {
                 ...item,
@@ -363,7 +391,9 @@ const resolvedHeaders = computed(() =>
                 balance: ref ? (Number(ref.balance) || 0) : 0,
             };
         });
-        return { ...h, picName: picLookup.value[h.pic_id] || h.pic_id || '-', formattedDate: formatDate(h.created_at), items };
+        const activeItems = allItems.filter(i => i.status !== 'Released');
+        const releasedItems = allItems.filter(i => i.status === 'Released');
+        return { ...h, picName: picLookup.value[h.pic_id] || h.pic_id || '-', formattedDate: formatDate(h.created_at), items: allItems, activeItems, releasedItems };
     })
 );
 
@@ -403,6 +433,11 @@ const expandedKey = ref(null);
 const expandPhase = ref('actions');
 const expandCtx = ref(null);
 const prevExpandedKey = ref(null);
+const releasedOpen = ref({});
+
+function toggleReleased(hdrId) {
+    releasedOpen.value = { ...releasedOpen.value, [hdrId]: !releasedOpen.value[hdrId] };
+}
 
 watch(expandedKey, (_newKey, oldKey) => {
     if (oldKey) {
@@ -482,7 +517,10 @@ function startReleaseHeader() {
     const hdr = expandCtx.value?.hdr;
     if (!hdr) return;
     confirmMessage.value = `Release booking ${hdr.bookingnumber} and all its line items?`;
-    pendingConfirmFn = doReleaseHeader;
+    pendingConfirmFn = () => {
+        const snapshotItems = (hdr.items || []).map(i => cleanItem(i));
+        dispatch({ action: 'release_header', is_edit: false, booking_header: cleanHeader(hdr), booking_items: snapshotItems });
+    };
     expandPhase.value = 'confirm';
 }
 
@@ -490,7 +528,14 @@ function startReleaseLine() {
     const ctx = expandCtx.value;
     if (!ctx?.item) return;
     confirmMessage.value = `Release ${ctx.item.sku} from booking ${ctx.hdr.bookingnumber}?`;
-    pendingConfirmFn = doReleaseLine;
+    pendingConfirmFn = () => {
+        const snapshotItems = (ctx.hdr.items || []).map(i => cleanItem(i));
+        dispatch({
+            action: 'release_lineitem', is_edit: false,
+            booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
+            target: { header_id: ctx.hdr.id, sku: ctx.item.sku, lineitem_id: ctx.item.id ?? ctx.item.line_id ?? null },
+        });
+    };
     expandPhase.value = 'confirm';
 }
 
@@ -550,23 +595,6 @@ function doCombine() {
     dispatch({ action: 'combine_selected', is_edit: false, booking_header: cleanHeader(first), booking_items: snapshotItems });
 }
 
-function doReleaseHeader() {
-    const hdr = expandCtx.value?.hdr;
-    if (!hdr) return;
-    const snapshotItems = (hdr.items || []).map(i => cleanItem(i));
-    dispatch({ action: 'release_header', is_edit: false, booking_header: cleanHeader(hdr), booking_items: snapshotItems });
-}
-
-function doReleaseLine() {
-    const ctx = expandCtx.value;
-    if (!ctx?.item) return;
-    const snapshotItems = (ctx.hdr.items || []).map(i => cleanItem(i));
-    dispatch({
-        action: 'release_lineitem', is_edit: false,
-        booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
-        target: { header_id: ctx.hdr.id, sku: ctx.item.sku, lineitem_id: ctx.item.id ?? ctx.item.line_id ?? null },
-    });
-}
 
 function submitUpdateQty() {
     if (editAvailability.value < 0) return;
@@ -638,7 +666,7 @@ watch(stagingData, (newVal) => {
 
     const pa = pendingAction.value;
     const actionMatch = newVal.action === pa.action;
-    const headerMatch = newVal.booking_header?.id === pa.headerId;
+    const headerMatch = !pa.headerId || !newVal.booking_header?.id || newVal.booking_header.id === pa.headerId;
     const reqMatch = !pa.requestId || !newVal.request_id || newVal.request_id === pa.requestId;
 
     if (actionMatch && headerMatch && reqMatch) {
@@ -951,6 +979,66 @@ onUnmounted(() => clearActionTimeout());
     &.is-del { background: #fef2f2; color: #991b1b; }
 }
 .bm-ie-err { margin: 0; font-size: 0.8em; color: #dc2626; font-weight: 500; }
+
+/* ── Previously Released ──────────────────────── */
+.bm-released-section {
+    border-top: 1px dashed #e5e7eb;
+}
+.bm-released-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 7px 14px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.78em;
+    font-weight: 500;
+    color: #9ca3af;
+    text-align: left;
+    transition: color 0.15s;
+    &:hover { color: #6b7280; }
+}
+.bm-released-chevron {
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+    &.is-open { transform: rotate(180deg); }
+}
+.bm-released-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+    &.is-open { grid-template-rows: 1fr; }
+}
+.bm-released-overflow { overflow: hidden; min-height: 0; }
+.bm-released-list {
+    padding: 0 14px 8px;
+    display: flex;
+    flex-direction: column;
+}
+.bm-released-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 100px 36px;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    opacity: 0.55;
+    font-size: 0.85em;
+    border-bottom: 1px solid #f3f4f6;
+    &:last-child { border-bottom: none; }
+}
+.bm-released-img { display: flex; align-items: center; justify-content: center; }
+.bm-released-thumb {
+    width: 26px; height: 26px; border-radius: 3px; object-fit: cover;
+    &--ph { background: #f3f4f6; display: flex; align-items: center; justify-content: center; color: #d1d5db; }
+}
+.bm-released-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.bm-released-model { font-weight: 500; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-released-variant { font-size: 0.78em; color: #9ca3af; }
+.bm-released-sku { font-family: monospace; font-size: 0.82em; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-released-qty { font-size: 0.85em; color: #6b7280; text-align: center; }
 
 /* ── Responsive ───────────────────────────────── */
 @media (max-width: 640px) {
