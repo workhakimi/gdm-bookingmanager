@@ -11,7 +11,6 @@ export default {
                     'selectedHeaders',
                     'selectedLineItems',
                     'picReference',
-                    'stagingData',
                 ],
             },
             {
@@ -64,28 +63,37 @@ export default {
     },
     triggerEvents: [
         {
-            name: 'actionRequest',
-            label: { en: 'On Action Request' },
+            name: 'onDeleteHeader',
+            label: { en: 'On Delete Header' },
             event: {
                 value: {
-                    action: '',
-                    staging_status: 'Sending',
-                    is_edit: false,
                     updated_at: '',
-                    request_id: '',
-                    booking_header: {
-                        id: '',
-                        bookingnumber: '',
-                        created_at: '',
-                        bookingtitle: '',
-                        pic_id: '',
-                    },
+                    booking_header: { id: '' },
                     booking_items: [],
-                    target: null,
-                    error_message: null,
                 },
             },
-            default: true,
+        },
+        {
+            name: 'onDeleteLineItem',
+            label: { en: 'On Delete Line Item' },
+            event: {
+                value: {
+                    updated_at: '',
+                    booking_header: { id: '' },
+                    booking_items: [],
+                },
+            },
+        },
+        {
+            name: 'onUpdateQuantity',
+            label: { en: 'On Update Quantity' },
+            event: {
+                value: {
+                    updated_at: '',
+                    booking_header: { id: '' },
+                    booking_items: [],
+                },
+            },
         },
     ],
     actions: [],
@@ -139,19 +147,6 @@ export default {
             bindingValidation: {
                 type: 'array',
                 tooltip: 'Array of PIC objects: { id, name } to resolve pic_id to display name',
-            },
-            /* wwEditor:end */
-        },
-        stagingData: {
-            label: { en: 'Staging Variable' },
-            type: 'ObjectList',
-            section: 'settings',
-            bindable: true,
-            defaultValue: null,
-            /* wwEditor:start */
-            bindingValidation: {
-                type: 'object',
-                tooltip: 'Two-way staging variable. Shape: { action, staging_status, booking_header, booking_items, request_id?, error_message? }',
             },
             /* wwEditor:end */
         },
