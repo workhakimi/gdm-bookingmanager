@@ -210,7 +210,7 @@ const userName = computed(() => {
     const raw = props.content?.userName;
     if (!raw) return 'Unknown';
     const resolved = wwLib.wwUtils.getDataFromCollection(raw);
-    return (typeof resolved === 'string' && resolved) ? resolved : 'Unknown';
+    return (typeof resolved === 'string' && resolved) ? resolved : 'User';
 });
 
 // ── Status Color Maps ──────────────────────────────────────
