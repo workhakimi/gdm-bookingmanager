@@ -445,7 +445,6 @@ const isLocked = computed(() => !!pendingAction.value);
 // ── Confirm State ──────────────────────────────────────────
 
 const confirmMessage = ref('');
-let pendingConfirmFn = null;
 
 // ── Edit Qty State ─────────────────────────────────────────
 
@@ -474,7 +473,6 @@ function startCombine() {
     confirmMessage.value =
         `Combine all ${headers.value.length} bookings under:\n` +
         `${first.bookingnumber} — ${first.bookingtitle || '-'}`;
-    pendingConfirmFn = doCombine;
     expandPhase.value = 'confirm';
 }
 
@@ -482,7 +480,6 @@ function startReleaseHeader() {
     const hdr = expandCtx.value?.hdr;
     if (!hdr) return;
     confirmMessage.value = `Release booking ${hdr.bookingnumber} and all its line items?`;
-    pendingConfirmFn = doReleaseHeader;
     expandPhase.value = 'confirm';
 }
 
@@ -490,7 +487,6 @@ function startReleaseLine() {
     const ctx = expandCtx.value;
     if (!ctx?.item) return;
     confirmMessage.value = `Release ${ctx.item.sku} from booking ${ctx.hdr.bookingnumber}?`;
-    pendingConfirmFn = doReleaseLine;
     expandPhase.value = 'confirm';
 }
 
@@ -502,8 +498,11 @@ function startUpdateQty() {
 }
 
 function executeConfirm() {
-    if (pendingConfirmFn) pendingConfirmFn();
-    pendingConfirmFn = null;
+    const ctx = expandCtx.value;
+    if (!ctx) return;
+    if (ctx.type === 'global') doCombine();
+    else if (ctx.type === 'header') doReleaseHeader();
+    else if (ctx.type === 'line') doReleaseLine();
 }
 
 // ── Dispatch Helpers ───────────────────────────────────────
