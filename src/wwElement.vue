@@ -6,49 +6,6 @@
                 <h2 class="bm-title">Booking Manager</h2>
                 <span class="bm-summary">{{ selectionSummary }}</span>
             </div>
-            <div class="bm-global-right">
-                <button
-                    class="bm-icon-btn bm-icon-btn--light"
-                    :disabled="isLocked || headers.length < 2"
-                    :title="headers.length < 2 ? 'Select 2 or more bookings to combine' : 'Booking actions'"
-                    @click="toggleExpand('global', { type: 'global' })"
-                >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
-                </button>
-            </div>
-        </div>
-
-        <!-- Global expand -->
-        <div class="bm-expand-wrap" :class="{ 'is-open': expandedKey === 'global' }">
-            <div class="bm-expand-overflow">
-                <div v-if="shouldRender('global')" class="bm-expand-content bm-expand-bar">
-                    <template v-if="expandPhase === 'actions'">
-                        <div class="bm-expand-actions">
-                            <button class="bm-action-btn" @click="startCombine">Combine Selected</button>
-                        </div>
-                    </template>
-                    <template v-else-if="expandPhase === 'confirm'">
-                        <div class="bm-expand-confirm">
-                            <p class="bm-confirm-msg">{{ confirmMessage }}</p>
-                            <div class="bm-expand-actions">
-                                <button class="bm-secondary-btn" @click="cancelToActions">Cancel</button>
-                                <button class="bm-action-btn" @click="executeConfirm">Confirm</button>
-                            </div>
-                        </div>
-                    </template>
-                    <template v-else>
-                        <div class="bm-expand-status-row">
-                            <span v-if="expandPhase === 'attempting'" class="bm-status-chip bm-status-chip--attempting">Attempting…</span>
-                            <span v-else-if="expandPhase === 'succeeded'" class="bm-status-chip bm-status-chip--succeeded">Succeeded</span>
-                            <template v-else-if="expandPhase === 'failed'">
-                                <span class="bm-status-chip bm-status-chip--failed">{{ pendingAction?.errorMessage || 'Failed' }}</span>
-                                <button class="bm-action-btn bm-action-btn--danger" @click="doRetry">Retry</button>
-                                <button class="bm-secondary-btn" @click="dismissFailure">Dismiss</button>
-                            </template>
-                        </div>
-                    </template>
-                </div>
-            </div>
         </div>
 
         <!-- ═══════════ BODY ═══════════ -->
@@ -88,12 +45,12 @@
                                     <button class="bm-action-btn" @click="startReleaseHeader">Release Booking</button>
                                 </div>
                             </template>
-                            <template v-else-if="expandPhase === 'confirm'">
+                            <template v-else-if="expandPhase === 'confirmReleaseHdr'">
                                 <div class="bm-expand-confirm">
                                     <p class="bm-confirm-msg">{{ confirmMessage }}</p>
                                     <div class="bm-expand-actions">
                                         <button class="bm-secondary-btn" @click="cancelToActions">Cancel</button>
-                                        <button class="bm-action-btn" @click="executeConfirm">Confirm</button>
+                                        <button class="bm-action-btn" @click="doReleaseHeader">Confirm Release</button>
                                     </div>
                                 </div>
                             </template>
@@ -163,12 +120,12 @@
                                 </template>
 
                                 <!-- Confirm release -->
-                                <template v-else-if="expandPhase === 'confirm'">
+                                <template v-else-if="expandPhase === 'confirmReleaseLine'">
                                     <div class="bm-expand-confirm">
                                         <p class="bm-confirm-msg">{{ confirmMessage }}</p>
                                         <div class="bm-expand-actions">
                                             <button class="bm-secondary-btn" @click="cancelToActions">Cancel</button>
-                                            <button class="bm-action-btn" @click="executeConfirm">Confirm</button>
+                                            <button class="bm-action-btn" @click="doReleaseLine">Confirm Release</button>
                                         </div>
                                     </div>
                                 </template>
@@ -480,7 +437,6 @@ const isLocked = computed(() => !!pendingAction.value);
 // ── Confirm State ──────────────────────────────────────────
 
 const confirmMessage = ref('');
-let pendingConfirmFn = null;
 
 // ── Edit Qty State ─────────────────────────────────────────
 
@@ -503,40 +459,36 @@ const editVariant = computed(() => {
 
 // ── Action Initiators ──────────────────────────────────────
 
-function startCombine() {
-    const first = resolvedHeaders.value[0];
-    if (!first) return;
-    confirmMessage.value =
-        `Combine all ${headers.value.length} bookings under:\n` +
-        `${first.bookingnumber} — ${first.bookingtitle || '-'}`;
-    pendingConfirmFn = doCombine;
-    expandPhase.value = 'confirm';
-}
-
 function startReleaseHeader() {
     const hdr = expandCtx.value?.hdr;
     if (!hdr) return;
     confirmMessage.value = `Release booking ${hdr.bookingnumber} and all its line items?`;
-    pendingConfirmFn = () => {
-        const snapshotItems = (hdr.items || []).map(i => cleanItem(i));
-        dispatch({ action: 'release_header', is_edit: false, booking_header: cleanHeader(hdr), booking_items: snapshotItems });
-    };
-    expandPhase.value = 'confirm';
+    expandPhase.value = 'confirmReleaseHdr';
+}
+
+function doReleaseHeader() {
+    const hdr = expandCtx.value?.hdr;
+    if (!hdr) return;
+    const snapshotItems = (hdr.items || []).map(i => cleanItem(i));
+    dispatch({ action: 'release_header', is_edit: false, booking_header: cleanHeader(hdr), booking_items: snapshotItems });
 }
 
 function startReleaseLine() {
     const ctx = expandCtx.value;
     if (!ctx?.item) return;
     confirmMessage.value = `Release ${ctx.item.sku} from booking ${ctx.hdr.bookingnumber}?`;
-    pendingConfirmFn = () => {
-        const snapshotItems = (ctx.hdr.items || []).map(i => cleanItem(i));
-        dispatch({
-            action: 'release_lineitem', is_edit: false,
-            booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
-            target: { header_id: ctx.hdr.id, sku: ctx.item.sku, lineitem_id: ctx.item.id ?? ctx.item.line_id ?? null },
-        });
-    };
-    expandPhase.value = 'confirm';
+    expandPhase.value = 'confirmReleaseLine';
+}
+
+function doReleaseLine() {
+    const ctx = expandCtx.value;
+    if (!ctx?.item) return;
+    const snapshotItems = (ctx.hdr.items || []).map(i => cleanItem(i));
+    dispatch({
+        action: 'release_lineitem', is_edit: false,
+        booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
+        target: { header_id: ctx.hdr.id, sku: ctx.item.sku, lineitem_id: ctx.item.id ?? ctx.item.line_id ?? null },
+    });
 }
 
 function startUpdateQty() {
@@ -546,16 +498,9 @@ function startUpdateQty() {
     expandPhase.value = 'updateQty';
 }
 
-function executeConfirm() {
-    console.log('[BSM] executeConfirm — pendingConfirmFn set:', !!pendingConfirmFn);
-    if (pendingConfirmFn) pendingConfirmFn();
-    pendingConfirmFn = null;
-}
-
 // ── Dispatch Helpers ───────────────────────────────────────
 
 function dispatch(payload) {
-    console.log('[BSM] dispatch called:', payload.action);
     const requestId = generateId();
     const stagingStatus = 'Sending';
     const updatedAt = new Date().toISOString();
@@ -585,20 +530,10 @@ function dispatch(payload) {
     scheduleActionTimeout();
 
     /* wwEditor:start */
-    if (props.wwEditorState?.isEditing) {
-        console.log('[BSM] emit BLOCKED — isEditing=true. Switch WeWeb to Preview mode to test.');
-        return;
-    }
+    if (props.wwEditorState?.isEditing) return;
     /* wwEditor:end */
 
-    console.log('[BSM] emitting actionRequest:', payload.action, payload);
     emit('trigger-event', { name: 'actionRequest', event: { value: payload } });
-}
-
-function doCombine() {
-    const first = resolvedHeaders.value[0];
-    const snapshotItems = resolvedHeaders.value.flatMap(h => (h.items || []).map(i => cleanItem(i)));
-    dispatch({ action: 'combine_selected', is_edit: false, booking_header: cleanHeader(first), booking_items: snapshotItems });
 }
 
 
@@ -740,7 +675,7 @@ onUnmounted(() => clearActionTimeout());
     color: var(--bm-global-text);
     flex-shrink: 0;
 }
-.bm-global-left { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.bm-global-left { display: flex; align-items: baseline; gap: 12px; min-width: 0; flex: 1 1 auto; }
 .bm-title { margin: 0; font-size: 1.05em; font-weight: 600; white-space: nowrap; }
 .bm-summary { font-size: 0.85em; opacity: 0.75; white-space: nowrap; }
 
