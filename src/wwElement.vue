@@ -174,6 +174,26 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Change Log dropdown -->
+                <div v-if="cardChangeLogs(hdr).length" class="bm-changelog-section">
+                    <button class="bm-released-toggle" @click="toggleChangeLog(hdr.id)">
+                        <svg class="bm-released-chevron" :class="{ 'is-open': openChangeLogCards[hdr.id] }" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5L6 7.5L9 4.5"/></svg>
+                        <span>Change Log ({{ cardChangeLogs(hdr).length }})</span>
+                    </button>
+                    <div class="bm-released-wrap" :class="{ 'is-open': openChangeLogCards[hdr.id] }">
+                        <div class="bm-released-overflow">
+                            <div v-for="log in cardChangeLogs(hdr)" :key="log.id" class="bm-cl-entry">
+                                <div class="bm-cl-row">
+                                    <span class="bm-cl-category">{{ log.category }}</span>
+                                    <span class="bm-cl-action">{{ log.action }}</span>
+                                </div>
+                                <div class="bm-cl-desc">{{ log.description }}</div>
+                                <div class="bm-cl-id">{{ log.connection }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -224,6 +244,7 @@ const headers = computed(() => wwLib.wwUtils.getDataFromCollection(props.content
 const lineItems = computed(() => wwLib.wwUtils.getDataFromCollection(props.content?.selectedLineItems) || []);
 const picReference = computed(() => wwLib.wwUtils.getDataFromCollection(props.content?.picReference) || []);
 const lineItemFK = computed(() => props.content?.lineItemHeaderKey || 'header_id');
+const changeLogData = computed(() => wwLib.wwUtils.getDataFromCollection(props.content?.changeLogData) || []);
 
 // ── Action Result Variable ─────────────────────────────────
 // Bound from WeWeb. null = idle, "successful" = success, "failed" = failure.
@@ -332,6 +353,16 @@ function releasedItems(hdr) { return hdr.items.filter(i => i.status === 'Release
 const openReleasedCards = ref({});
 function toggleReleased(hdrId) {
     openReleasedCards.value = { ...openReleasedCards.value, [hdrId]: !openReleasedCards.value[hdrId] };
+}
+
+// ── Change Log per Card ───────────────────────────────────
+function cardChangeLogs(hdr) {
+    return changeLogData.value.filter(log => log.connection === hdr.id);
+}
+
+const openChangeLogCards = ref({});
+function toggleChangeLog(hdrId) {
+    openChangeLogCards.value = { ...openChangeLogCards.value, [hdrId]: !openChangeLogCards.value[hdrId] };
 }
 
 // ── Root Styles ────────────────────────────────────────────
@@ -795,6 +826,44 @@ function emitUpdateQty(hdr, item) {
     background: #fafafa;
     padding-top: 4px;
     padding-bottom: 4px;
+}
+
+/* ── Change Log Section ───────────────────────── */
+.bm-changelog-section {
+    border-top: 1px solid #e5e7eb;
+}
+.bm-cl-entry {
+    padding: 8px 14px;
+    border-bottom: 1px solid #f3f4f6;
+    &:last-child { border-bottom: none; }
+}
+.bm-cl-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+.bm-cl-category {
+    font-size: 0.72em;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6b7280;
+    letter-spacing: 0.03em;
+}
+.bm-cl-action {
+    font-size: 0.82em;
+    font-weight: 500;
+    color: #374151;
+}
+.bm-cl-desc {
+    font-size: 0.78em;
+    color: #6b7280;
+    line-height: 1.4;
+}
+.bm-cl-id {
+    font-size: 0.68em;
+    color: #d1d5db;
+    margin-top: 2px;
 }
 
 /* ── Responsive ───────────────────────────────── */

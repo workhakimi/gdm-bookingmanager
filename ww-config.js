@@ -13,6 +13,7 @@ export default {
                     'picReference',
                     'actionResult',
                     'userName',
+                    'changeLogData',
                 ],
             },
             {
@@ -167,6 +168,19 @@ export default {
             bindingValidation: {
                 type: 'string',
                 tooltip: 'Bind to current user display name for change log entries',
+            },
+            /* wwEditor:end */
+        },
+        changeLogData: {
+            label: { en: 'Change Log Data' },
+            type: 'ObjectList',
+            section: 'settings',
+            bindable: true,
+            defaultValue: [],
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'array',
+                tooltip: 'Array of change log objects: { id, timestamp, category, action, description, connection }',
             },
             /* wwEditor:end */
         },
