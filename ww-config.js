@@ -11,6 +11,7 @@ export default {
                     'selectedHeaders',
                     'selectedLineItems',
                     'picReference',
+                    'actionResult',
                 ],
             },
             {
@@ -147,6 +148,19 @@ export default {
             bindingValidation: {
                 type: 'array',
                 tooltip: 'Array of PIC objects: { id, name } to resolve pic_id to display name',
+            },
+            /* wwEditor:end */
+        },
+        actionResult: {
+            label: { en: 'Action Result Variable' },
+            type: 'Text',
+            section: 'settings',
+            bindable: true,
+            defaultValue: null,
+            /* wwEditor:start */
+            bindingValidation: {
+                type: 'string',
+                tooltip: 'Bind a variable: null = idle, "successful" = success, "failed" = failure. Set by your workflow after processing an event.',
             },
             /* wwEditor:end */
         },

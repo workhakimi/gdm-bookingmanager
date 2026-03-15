@@ -31,7 +31,7 @@
                         </div>
                         <div class="bm-card-counts">{{ hdr.unique_skus ?? 0 }} Unique SKUs · {{ hdr.total_quantity ?? 0 }} Total Qty</div>
                     </div>
-                    <button class="bm-icon-btn" @click="toggleExpand(`h:${hdr.id}`, { type: 'header', hdr })">
+                    <button class="bm-icon-btn" :disabled="isLocked" @click="toggleExpand(`h:${hdr.id}`, { type: 'header', hdr })">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
                     </button>
                 </div>
@@ -40,9 +40,22 @@
                 <div class="bm-expand-wrap" :class="{ 'is-open': expandedKey === `h:${hdr.id}` }">
                     <div class="bm-expand-overflow">
                         <div v-if="shouldRender(`h:${hdr.id}`)" class="bm-expand-content bm-expand-bar">
-                            <div class="bm-expand-actions">
-                                <button class="bm-action-btn bm-action-btn--danger" @click="emitDeleteHeader(hdr)">Delete Booking</button>
-                            </div>
+                            <template v-if="expandPhase === 'actions'">
+                                <div class="bm-expand-actions">
+                                    <button class="bm-action-btn bm-action-btn--danger" @click="emitDeleteHeader(hdr)">Delete Booking</button>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <div class="bm-expand-status-row">
+                                    <span v-if="expandPhase === 'attempting'" class="bm-status-chip bm-status-chip--attempting">Processing…</span>
+                                    <span v-else-if="expandPhase === 'succeeded'" class="bm-status-chip bm-status-chip--succeeded">Succeeded</span>
+                                    <template v-else-if="expandPhase === 'failed'">
+                                        <span class="bm-status-chip bm-status-chip--failed">Failed</span>
+                                        <button class="bm-action-btn bm-action-btn--danger" @click="doRetry">Retry</button>
+                                        <button class="bm-secondary-btn" @click="dismiss">Dismiss</button>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -78,7 +91,7 @@
                         </div>
                         <div class="bm-l bm-l-qty">{{ item.quantity }}</div>
                         <div class="bm-l bm-l-action">
-                            <button class="bm-icon-btn bm-icon-btn--sm" @click="toggleExpand(`l:${hdr.id}:${item._key}`, { type: 'line', hdr, item })">
+                            <button class="bm-icon-btn bm-icon-btn--sm" :disabled="isLocked" @click="toggleExpand(`l:${hdr.id}:${item._key}`, { type: 'line', hdr, item })">
                                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
                             </button>
                         </div>
@@ -119,6 +132,19 @@
                                         </div>
                                     </div>
                                 </template>
+
+                                <!-- Status feedback -->
+                                <template v-else>
+                                    <div class="bm-expand-status-row">
+                                        <span v-if="expandPhase === 'attempting'" class="bm-status-chip bm-status-chip--attempting">Processing…</span>
+                                        <span v-else-if="expandPhase === 'succeeded'" class="bm-status-chip bm-status-chip--succeeded">Succeeded</span>
+                                        <template v-else-if="expandPhase === 'failed'">
+                                            <span class="bm-status-chip bm-status-chip--failed">Failed</span>
+                                            <button class="bm-action-btn bm-action-btn--danger" @click="doRetry">Retry</button>
+                                            <button class="bm-secondary-btn" @click="dismiss">Dismiss</button>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
@@ -131,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
 
 const props = defineProps({
     content: { type: Object, required: true },
@@ -163,6 +189,18 @@ const headers = computed(() => wwLib.wwUtils.getDataFromCollection(props.content
 const lineItems = computed(() => wwLib.wwUtils.getDataFromCollection(props.content?.selectedLineItems) || []);
 const picReference = computed(() => wwLib.wwUtils.getDataFromCollection(props.content?.picReference) || []);
 const lineItemFK = computed(() => props.content?.lineItemHeaderKey || 'header_id');
+
+// ── Action Result Variable ─────────────────────────────────
+// Bound from WeWeb. null = idle, "successful" = success, "failed" = failure.
+
+const actionResult = computed(() => {
+    const raw = props.content?.actionResult;
+    if (!raw) return null;
+    const resolved = wwLib.wwUtils.getDataFromCollection(raw);
+    if (typeof resolved === 'string') return resolved;
+    if (Array.isArray(resolved)) return resolved[0] || null;
+    return resolved;
+});
 
 // ── Status Color Maps ──────────────────────────────────────
 
@@ -274,6 +312,7 @@ const rootStyles = computed(() => ({
 }));
 
 // ── Expansion State ────────────────────────────────────────
+// expandPhase: 'actions' | 'updateQty' | 'attempting' | 'succeeded' | 'failed'
 
 const expandedKey = ref(null);
 const expandPhase = ref('actions');
@@ -292,16 +331,26 @@ function shouldRender(key) {
 }
 
 function toggleExpand(key, ctx) {
+    if (isLocked.value) return;
     if (expandedKey.value === key) {
-        expandedKey.value = null;
-        expandPhase.value = 'actions';
-        expandCtx.value = null;
+        collapseExpand();
     } else {
         expandedKey.value = key;
         expandPhase.value = 'actions';
         expandCtx.value = ctx;
     }
 }
+
+function collapseExpand() {
+    expandedKey.value = null;
+    expandPhase.value = 'actions';
+    expandCtx.value = null;
+}
+
+// ── Pending Action ─────────────────────────────────────────
+
+const pendingAction = ref(null);   // { eventName, payload }
+const isLocked = computed(() => !!pendingAction.value);
 
 // ── Edit Qty State ─────────────────────────────────────────
 
@@ -323,10 +372,86 @@ function startUpdateQty(item) {
     expandPhase.value = 'updateQty';
 }
 
+// ── Dispatch (emit + wait for result) ──────────────────────
+
+const TIMEOUT_MS = 7000;
+let timeoutHandle = null;
+
+function dispatch(eventName, payload) {
+    pendingAction.value = { eventName, payload };
+    expandPhase.value = 'attempting';
+    scheduleTimeout();
+
+    /* wwEditor:start */
+    if (props.wwEditorState?.isEditing) return;
+    /* wwEditor:end */
+
+    emit('trigger-event', { name: eventName, event: { value: payload } });
+}
+
+function scheduleTimeout() {
+    clearTimeout(timeoutHandle);
+    timeoutHandle = setTimeout(() => {
+        if (pendingAction.value && expandPhase.value === 'attempting') {
+            expandPhase.value = 'failed';
+        }
+    }, TIMEOUT_MS);
+}
+
+function clearTimeoutHandle() {
+    clearTimeout(timeoutHandle);
+    timeoutHandle = null;
+}
+
+// ── Watch actionResult variable ────────────────────────────
+
+watch(actionResult, (val) => {
+    if (!val || !pendingAction.value) return;
+    if (expandPhase.value !== 'attempting') return;
+
+    clearTimeoutHandle();
+
+    if (val === 'successful') {
+        expandPhase.value = 'succeeded';
+        setTimeout(() => {
+            if (expandPhase.value === 'succeeded') {
+                pendingAction.value = null;
+                collapseExpand();
+            }
+        }, 2000);
+    } else if (val === 'failed') {
+        expandPhase.value = 'failed';
+    }
+});
+
+// ── Retry & Dismiss ────────────────────────────────────────
+
+function doRetry() {
+    if (!pendingAction.value) return;
+    const { eventName, payload } = pendingAction.value;
+    payload.updated_at = new Date().toISOString();
+    expandPhase.value = 'attempting';
+    scheduleTimeout();
+
+    /* wwEditor:start */
+    if (props.wwEditorState?.isEditing) return;
+    /* wwEditor:end */
+
+    emit('trigger-event', { name: eventName, event: { value: payload } });
+}
+
+function dismiss() {
+    clearTimeoutHandle();
+    pendingAction.value = null;
+    collapseExpand();
+}
+
+onUnmounted(() => clearTimeoutHandle());
+
 // ── Event Emitters ─────────────────────────────────────────
 
 function emitDeleteHeader(hdr) {
-    const payload = {
+    dispatch('onDeleteHeader', {
         updated_at: new Date().toISOString(),
         booking_header: { id: hdr.id },
         booking_items: (hdr.items || []).map(i => ({
@@ -335,15 +460,11 @@ function emitDeleteHeader(hdr) {
             quantity: i.quantity,
             status: 'Released',
         })),
-    };
-    emit('trigger-event', { name: 'onDeleteHeader', event: { value: payload } });
-    expandedKey.value = null;
-    expandPhase.value = 'actions';
-    expandCtx.value = null;
+    });
 }
 
 function emitDeleteLineItem(hdr, item) {
-    const payload = {
+    dispatch('onDeleteLineItem', {
         updated_at: new Date().toISOString(),
         booking_header: { id: hdr.id },
         booking_items: [{
@@ -352,16 +473,12 @@ function emitDeleteLineItem(hdr, item) {
             quantity: item.quantity,
             status: 'Released',
         }],
-    };
-    emit('trigger-event', { name: 'onDeleteLineItem', event: { value: payload } });
-    expandedKey.value = null;
-    expandPhase.value = 'actions';
-    expandCtx.value = null;
+    });
 }
 
 function emitUpdateQty(hdr, item) {
     if (editAvailability.value < 0 || editQtyValue.value < 1) return;
-    const payload = {
+    dispatch('onUpdateQuantity', {
         updated_at: new Date().toISOString(),
         booking_header: { id: hdr.id },
         booking_items: [{
@@ -370,11 +487,7 @@ function emitUpdateQty(hdr, item) {
             quantity: editQtyValue.value,
             status: item.status,
         }],
-    };
-    emit('trigger-event', { name: 'onUpdateQuantity', event: { value: payload } });
-    expandedKey.value = null;
-    expandPhase.value = 'actions';
-    expandCtx.value = null;
+    });
 }
 </script>
 
@@ -486,7 +599,8 @@ function emitUpdateQty(hdr, item) {
     width: 28px; height: 28px; border: none; border-radius: 6px;
     background: transparent; color: var(--bm-kebab-color, #6b7280); cursor: pointer;
     transition: background 0.15s, color 0.15s;
-    &:hover { background: #e5e7eb; color: var(--bm-kebab-color, #111827); }
+    &:hover:not(:disabled) { background: #e5e7eb; color: var(--bm-kebab-color, #111827); }
+    &:disabled { opacity: 0.35; cursor: not-allowed; }
 }
 .bm-icon-btn--sm { width: 24px; height: 24px; }
 
@@ -512,6 +626,28 @@ function emitUpdateQty(hdr, item) {
     gap: 8px;
     flex-wrap: wrap;
 }
+
+/* ── Expand: Status row ───────────────────────── */
+.bm-expand-status-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ── Status Chips ─────────────────────────────── */
+.bm-status-chip {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: var(--bm-act-radius);
+    font-size: 0.88em;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.bm-status-chip--attempting { background: #9ca3af; color: #fff; }
+.bm-status-chip--succeeded { background: #16a34a; color: #fff; }
+.bm-status-chip--failed { background: #fef2f2; color: #991b1b; }
 
 /* ── Action Button ────────────────────────────── */
 .bm-action-btn {
