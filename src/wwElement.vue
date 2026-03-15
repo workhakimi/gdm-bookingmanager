@@ -190,7 +190,8 @@
                                     <span class="bm-cl-time">{{ formatDate(log.timestamp) }}</span>
                                 </div>
                                 <div class="bm-cl-desc">{{ log.description }}</div>
-                                <div class="bm-cl-id">{{ log.connection }}</div>
+                                <div class="bm-cl-id">Change Log ID: {{ log.id }}</div>
+                                <div class="bm-cl-id">Connection ID: {{ log.connection }}</div>
                             </div>
                         </div>
                     </div>
