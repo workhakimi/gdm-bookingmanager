@@ -579,7 +579,7 @@ function emitUpdateQty(hdr, item) {
 .bm-cards {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 20px;
 }
 .bm-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 16px; color: #9ca3af; text-align: center; gap: 8px; }
 .bm-empty-icon { width: 40px; height: 40px; }
