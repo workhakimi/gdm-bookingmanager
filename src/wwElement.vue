@@ -548,7 +548,7 @@ function emitUpdateQty(hdr, item) {
 .bm-card {
     background: var(--bm-card-bg);
     border: 1px solid var(--bm-card-border);
-    border-radius: 8px;
+    border-radius: 0;
     overflow: hidden;
 }
 .bm-card-head {
