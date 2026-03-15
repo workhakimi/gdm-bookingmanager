@@ -187,14 +187,14 @@
                                                 <template v-if="editQtyValue > 0">
                                                     Avail after: <strong>{{ editAvailability }}</strong>
                                                 </template>
-                                                <template v-else>Qty 0 = delete line</template>
+                                                <template v-else>Qty 0 = release line</template>
                                             </div>
                                         </div>
                                         <p v-if="editAvailability < 0 && editQtyValue > 0" class="bm-ie-err">Cannot exceed available stock</p>
                                         <div class="bm-expand-actions">
                                             <button class="bm-secondary-btn" @click="cancelToActions">Cancel</button>
                                             <button v-if="editQtyValue > 0" class="bm-action-btn" :disabled="editAvailability < 0" @click="submitUpdateQty">Submit</button>
-                                            <button v-else class="bm-action-btn bm-action-btn--danger" @click="submitDeleteViaQty">Delete Line Item</button>
+                                            <button v-else class="bm-action-btn bm-action-btn--danger" @click="submitReleaseViaQty">Release Line Item</button>
                                         </div>
                                     </div>
                                 </template>
@@ -296,13 +296,28 @@ const lineItemStatusColors = computed(() => {
     return (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
 });
 
+const STATUS_DEFAULTS = {
+    'Booked': { bg: '#dbeafe', color: '#1e40af' },
+    'Issue Raised': { bg: '#fee2e2', color: '#991b1b' },
+    'Processing': { bg: '#fef9c3', color: '#854d0e' },
+    'Delivered to Production': { bg: '#f3e8ff', color: '#6b21a8' },
+    'Delivered to Client': { bg: '#dcfce7', color: '#166534' },
+    'Released': { bg: '#f3f4f6', color: '#6b7280' },
+};
+
+function resolveStatusStyle(status, colorMap) {
+    const bg = colorMap[status];
+    if (bg) return { background: bg, color: STATUS_DEFAULTS[status]?.color || '#374151' };
+    const def = STATUS_DEFAULTS[status];
+    if (def) return { background: def.bg, color: def.color };
+    return {};
+}
+
 function headerStatusStyle(status) {
-    const bg = headerStatusColors.value[status];
-    return bg ? { background: bg } : {};
+    return resolveStatusStyle(status, headerStatusColors.value);
 }
 function lineStatusStyle(status) {
-    const bg = lineItemStatusColors.value[status];
-    return bg ? { background: bg } : {};
+    return resolveStatusStyle(status, lineItemStatusColors.value);
 }
 
 // ── Memoized Lookups ───────────────────────────────────────
@@ -537,7 +552,7 @@ function doReleaseHeader() {
     const hdr = expandCtx.value?.hdr;
     if (!hdr) return;
     const snapshotItems = (hdr.items || []).map(i => cleanItem(i));
-    dispatch({ action: 'delete_header', is_edit: false, booking_header: cleanHeader(hdr), booking_items: snapshotItems });
+    dispatch({ action: 'release_header', is_edit: false, booking_header: cleanHeader(hdr), booking_items: snapshotItems });
 }
 
 function doReleaseLine() {
@@ -545,7 +560,7 @@ function doReleaseLine() {
     if (!ctx?.item) return;
     const snapshotItems = (ctx.hdr.items || []).map(i => cleanItem(i));
     dispatch({
-        action: 'delete_lineitem', is_edit: false,
+        action: 'release_lineitem', is_edit: false,
         booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
         target: { header_id: ctx.hdr.id, sku: ctx.item.sku, lineitem_id: ctx.item.id ?? ctx.item.line_id ?? null },
     });
@@ -572,12 +587,12 @@ function submitUpdateQty() {
     });
 }
 
-function submitDeleteViaQty() {
+function submitReleaseViaQty() {
     const ctx = expandCtx.value;
     if (!ctx?.item) return;
     const snapshotItems = (ctx.hdr.items || []).map(i => cleanItem(i));
     dispatch({
-        action: 'delete_lineitem', is_edit: false,
+        action: 'release_lineitem', is_edit: false,
         booking_header: cleanHeader(ctx.hdr), booking_items: snapshotItems,
         target: { header_id: ctx.hdr.id, sku: ctx.item.sku, lineitem_id: ctx.item.id ?? ctx.item.line_id ?? null },
     });

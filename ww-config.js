@@ -170,8 +170,15 @@ export default {
             type: 'RawObject',
             section: 'settings',
             bindable: true,
-            defaultValue: {},
-            options: { placeholder: '{ "Booked": "#dbeafe", "Confirmed": "#d1fae5" }' },
+            defaultValue: {
+                'Booked': '#dbeafe',
+                'Issue Raised': '#fee2e2',
+                'Processing': '#fef9c3',
+                'Delivered to Production': '#f3e8ff',
+                'Delivered to Client': '#dcfce7',
+                'Released': '#f3f4f6',
+            },
+            options: { placeholder: '{ "Booked": "#dbeafe", "Released": "#f3f4f6" }' },
             /* wwEditor:start */
             bindingValidation: { type: 'object', tooltip: 'Map of header status value to CSS background color' },
             /* wwEditor:end */
@@ -181,8 +188,15 @@ export default {
             type: 'RawObject',
             section: 'settings',
             bindable: true,
-            defaultValue: {},
-            options: { placeholder: '{ "Booked": "#dbeafe", "Pending": "#fef3c7" }' },
+            defaultValue: {
+                'Booked': '#dbeafe',
+                'Issue Raised': '#fee2e2',
+                'Processing': '#fef9c3',
+                'Delivered to Production': '#f3e8ff',
+                'Delivered to Client': '#dcfce7',
+                'Released': '#f3f4f6',
+            },
+            options: { placeholder: '{ "Booked": "#dbeafe", "Released": "#f3f4f6" }' },
             /* wwEditor:start */
             bindingValidation: { type: 'object', tooltip: 'Map of line item status value to CSS background color' },
             /* wwEditor:end */
