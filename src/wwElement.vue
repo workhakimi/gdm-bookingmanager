@@ -1,15 +1,7 @@
 <template>
     <div class="booking-manager" :style="rootStyles">
-        <!-- ═══════════ GLOBAL HEADER ═══════════ -->
-        <div class="bm-global-header">
-            <div class="bm-global-left">
-                <h2 class="bm-title">Booking Manager</h2>
-                <span class="bm-summary">{{ selectionSummary }}</span>
-            </div>
-        </div>
-
-        <!-- ═══════════ BODY ═══════════ -->
-        <div class="bm-body">
+        <!-- ═══════════ CARDS ═══════════ -->
+        <div class="bm-cards">
             <div v-if="!resolvedHeaders.length" class="bm-empty">
                 <svg class="bm-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 7h8M8 12h5"/></svg>
                 <p>No bookings selected</p>
@@ -154,6 +146,7 @@
             </div>
         </div>
     </div>
+
 </template>
 
 <script setup>
@@ -283,25 +276,13 @@ const resolvedHeaders = computed(() =>
     })
 );
 
-// ── Selection Summary ──────────────────────────────────────
-
-const selectionSummary = computed(() => {
-    let unique = 0, total = 0;
-    headers.value.forEach(h => { unique += Number(h.unique_skus) || 0; total += Number(h.total_quantity) || 0; });
-    return `${unique} Unique, ${total} Total`;
-});
-
 // ── Root Styles ────────────────────────────────────────────
 
 const rootStyles = computed(() => ({
     '--bm-card-bg': props.content?.cardBgColor || '#ffffff',
     '--bm-card-border': props.content?.cardBorderColor || '#e5e7eb',
-    '--bm-card-radius': props.content?.cardBorderRadius || '8px',
-    '--bm-header-bg': props.content?.headerBgColor || '#f9fafb',
     '--bm-line-bg': props.content?.lineBgColor || '#ffffff',
-    '--bm-line-hover': props.content?.lineHoverColor || '#f3f4f6',
-    '--bm-global-bg': props.content?.globalHeaderBgColor || '#111827',
-    '--bm-global-text': props.content?.globalHeaderTextColor || '#ffffff',
+    '--bm-line-hover': props.content?.lineHoverColor || '#f0f7ff',
     '--bm-kebab-color': props.content?.kebabIconColor || '#6b7280',
     '--bm-font': props.content?.fontFamily || "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     '--bm-font-size': props.content?.fontSize || '13px',
@@ -495,7 +476,7 @@ function emitUpdateQty(hdr, item) {
 .booking-manager {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    width: 100%;
     font-family: var(--bm-font);
     font-size: var(--bm-font-size);
     color: #1f2937;
@@ -504,29 +485,11 @@ function emitUpdateQty(hdr, item) {
     *, *::before, *::after { box-sizing: inherit; }
 }
 
-/* ── Global Header ────────────────────────────── */
-.bm-global-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--bm-global-bg);
-    color: var(--bm-global-text);
-    flex-shrink: 0;
-}
-.bm-global-left { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-.bm-title { margin: 0; font-size: 1.05em; font-weight: 600; white-space: nowrap; }
-.bm-summary { font-size: 0.85em; opacity: 0.75; white-space: nowrap; }
-
-/* ── Body ─────────────────────────────────────── */
-.bm-body {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: 12px;
+/* ── Cards container ─────────────────────────── */
+.bm-cards {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: #f3f4f6;
 }
 .bm-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 16px; color: #9ca3af; text-align: center; gap: 8px; }
 .bm-empty-icon { width: 40px; height: 40px; }
@@ -535,15 +498,14 @@ function emitUpdateQty(hdr, item) {
 .bm-card {
     background: var(--bm-card-bg);
     border: 1px solid var(--bm-card-border);
-    border-radius: var(--bm-card-radius);
+    border-radius: 8px;
     overflow: hidden;
 }
 .bm-card-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    padding: 12px 14px;
-    background: var(--bm-header-bg);
+    padding: 10px 14px;
     border-bottom: 1px solid var(--bm-card-border);
     gap: 12px;
 }
@@ -555,9 +517,9 @@ function emitUpdateQty(hdr, item) {
 .bm-sep { color: #d1d5db; }
 .bm-card-counts { font-size: 0.8em; color: #6b7280; margin-top: 4px; }
 
-/* ── Status Pill ──────────────────────────────── */
-.bm-status-pill { display: inline-block; padding: 1px 8px; border-radius: 9999px; font-size: 0.78em; font-weight: 500; background: #e5e7eb; color: #374151; white-space: nowrap; }
-.bm-status-pill--sm { padding: 0 6px; font-size: 0.75em; }
+/* ── Status Badge (square, matching table) ────── */
+.bm-status-pill { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.78em; font-weight: 500; background: #e5e7eb; color: #374151; white-space: nowrap; }
+.bm-status-pill--sm { padding: 1px 6px; font-size: 0.75em; }
 
 /* ── Lines Grid ───────────────────────────────── */
 .bm-lines-head, .bm-line {
@@ -567,8 +529,8 @@ function emitUpdateQty(hdr, item) {
     gap: 6px;
     padding: 4px 14px;
 }
-.bm-lines-head { border-bottom: 1px solid var(--bm-card-border); padding-top: 6px; padding-bottom: 6px; }
-.bm-lh { font-size: 0.72em; font-weight: 600; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.04em; }
+.bm-lines-head { border-bottom: 1px solid var(--bm-card-border); padding-top: 6px; padding-bottom: 6px; background: #f8f9fa; }
+.bm-lh { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #374151; letter-spacing: 0.03em; }
 .bm-line-wrap { border-bottom: 1px solid #f3f4f6; &:last-child { border-bottom: none; } }
 .bm-line {
     background: var(--bm-line-bg);
@@ -710,9 +672,8 @@ function emitUpdateQty(hdr, item) {
 @media (max-width: 640px) {
     .bm-lines-head, .bm-line { grid-template-columns: 36px 1fr 80px 44px 60px 40px 28px; gap: 4px; padding-left: 8px; padding-right: 8px; }
     .bm-product-img, .bm-img-ph { width: 28px; height: 28px; }
-    .bm-global-header { padding: 10px 12px; }
-    .bm-body { padding: 8px; gap: 8px; }
-    .bm-card-head { padding: 10px; }
+    .bm-cards { gap: 8px; }
+    .bm-card-head { padding: 8px 10px; }
     .bm-expand-content { padding: 8px 10px; }
 }
 </style>

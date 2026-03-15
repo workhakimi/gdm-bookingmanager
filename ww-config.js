@@ -32,18 +32,10 @@ export default {
                 properties: [
                     'cardBgColor',
                     'cardBorderColor',
-                    'headerBgColor',
                     'lineBgColor',
                     'lineHoverColor',
-                    'globalHeaderBgColor',
-                    'globalHeaderTextColor',
                     'kebabIconColor',
                 ],
-            },
-            {
-                label: 'Shape',
-                isCollapsible: true,
-                properties: ['cardBorderRadius'],
             },
             {
                 label: 'Action Buttons',
@@ -213,19 +205,9 @@ export default {
 
         cardBgColor: { label: { en: 'Card background' }, type: 'Color', section: 'style', defaultValue: '#ffffff' },
         cardBorderColor: { label: { en: 'Card border' }, type: 'Color', section: 'style', defaultValue: '#e5e7eb' },
-        headerBgColor: { label: { en: 'Card header background' }, type: 'Color', section: 'style', defaultValue: '#f9fafb' },
         lineBgColor: { label: { en: 'Line item background' }, type: 'Color', section: 'style', defaultValue: '#ffffff' },
-        lineHoverColor: { label: { en: 'Line item hover' }, type: 'Color', section: 'style', defaultValue: '#f3f4f6' },
-        globalHeaderBgColor: { label: { en: 'Global header background' }, type: 'Color', section: 'style', defaultValue: '#111827' },
-        globalHeaderTextColor: { label: { en: 'Global header text' }, type: 'Color', section: 'style', defaultValue: '#ffffff' },
+        lineHoverColor: { label: { en: 'Line item hover' }, type: 'Color', section: 'style', defaultValue: '#f0f7ff' },
         kebabIconColor: { label: { en: 'Kebab icon color' }, type: 'Color', section: 'style', defaultValue: '#6b7280' },
-        cardBorderRadius: {
-            label: { en: 'Card border radius' },
-            type: 'Text',
-            section: 'style',
-            defaultValue: '8px',
-            options: { placeholder: '8px' },
-        },
         actionBtnColor: {
             label: { en: 'Action button color' },
             type: 'Color',
