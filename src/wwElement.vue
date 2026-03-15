@@ -638,7 +638,7 @@ watch(stagingData, (newVal) => {
 
     const pa = pendingAction.value;
     const actionMatch = newVal.action === pa.action;
-    const headerMatch = newVal.booking_header?.id === pa.headerId;
+    const headerMatch = !pa.headerId || !newVal.booking_header?.id || newVal.booking_header.id === pa.headerId;
     const reqMatch = !pa.requestId || !newVal.request_id || newVal.request_id === pa.requestId;
 
     if (actionMatch && headerMatch && reqMatch) {
