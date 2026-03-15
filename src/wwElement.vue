@@ -63,8 +63,8 @@
                     <span class="bm-lh bm-lh-action"></span>
                 </div>
 
-                <!-- Line items -->
-                <div v-for="item in hdr.items" :key="item._key" class="bm-line-wrap">
+                <!-- Active line items -->
+                <div v-for="item in activeItems(hdr)" :key="item._key" class="bm-line-wrap">
                     <div class="bm-line">
                         <div class="bm-l bm-l-img">
                             <img v-if="item.imagelink" :src="item.imagelink" :alt="item.sku" class="bm-product-img"/>
@@ -142,7 +142,38 @@
                     </div>
                 </div>
 
-                <div v-if="!hdr.items.length" class="bm-no-lines">No line items</div>
+                <div v-if="!activeItems(hdr).length && !releasedItems(hdr).length" class="bm-no-lines">No line items</div>
+
+                <!-- Released items dropdown -->
+                <div v-if="releasedItems(hdr).length" class="bm-released-section">
+                    <button class="bm-released-toggle" @click="toggleReleased(hdr.id)">
+                        <svg class="bm-released-chevron" :class="{ 'is-open': openReleasedCards[hdr.id] }" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5L6 7.5L9 4.5"/></svg>
+                        <span>Released ({{ releasedItems(hdr).length }})</span>
+                    </button>
+                    <div class="bm-released-wrap" :class="{ 'is-open': openReleasedCards[hdr.id] }">
+                        <div class="bm-released-overflow">
+                            <div v-for="item in releasedItems(hdr)" :key="item._key" class="bm-line bm-line--released">
+                                <div class="bm-l bm-l-img">
+                                    <img v-if="item.imagelink" :src="item.imagelink" :alt="item.sku" class="bm-product-img"/>
+                                    <div v-else class="bm-img-ph">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                                    </div>
+                                </div>
+                                <div class="bm-l bm-l-product">
+                                    <span class="bm-l-model">{{ item.model || 'Unknown' }}</span>
+                                    <span class="bm-l-variant">{{ [item.color, item.size].filter(Boolean).join(' · ') || '-' }}</span>
+                                </div>
+                                <div class="bm-l bm-l-sku">{{ item.sku }}</div>
+                                <div class="bm-l bm-l-avail">{{ item.balance }}</div>
+                                <div class="bm-l bm-l-status">
+                                    <span class="bm-status-pill bm-status-pill--sm" :style="lineStatusStyle(item.status)">{{ item.status }}</span>
+                                </div>
+                                <div class="bm-l bm-l-qty">{{ item.quantity }}</div>
+                                <div class="bm-l bm-l-action"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -293,6 +324,15 @@ const resolvedHeaders = computed(() =>
         return { ...h, picName: picLookup.value[h.pic_id] || h.pic_id || '-', formattedDate: formatDate(h.created_at), items };
     })
 );
+
+// ── Active / Released Split ────────────────────────────
+function activeItems(hdr) { return hdr.items.filter(i => i.status !== 'Released'); }
+function releasedItems(hdr) { return hdr.items.filter(i => i.status === 'Released'); }
+
+const openReleasedCards = ref({});
+function toggleReleased(hdrId) {
+    openReleasedCards.value = { ...openReleasedCards.value, [hdrId]: !openReleasedCards.value[hdrId] };
+}
 
 // ── Root Styles ────────────────────────────────────────────
 
@@ -599,7 +639,7 @@ function emitUpdateQty(hdr, item) {
 .bm-l-product { display: flex; flex-direction: column; gap: 1px; }
 .bm-l-model { font-weight: 500; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bm-l-variant { font-size: 0.78em; color: #6b7280; }
-.bm-l-sku { font-size: 0.85em; font-family: monospace; color: #4b5563; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-l-sku { font-size: 0.85em; color: #4b5563; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bm-l-avail { font-weight: 600; font-size: 0.9em; text-align: center; &.is-low { color: #dc2626; } &.is-warning { color: #ea580c; } }
 .bm-l-status { text-align: center; }
 .bm-l-qty { font-weight: 600; font-size: 0.9em; text-align: center; }
@@ -717,6 +757,43 @@ function emitUpdateQty(hdr, item) {
     &.is-warning { background: #fff7ed; color: #c2410c; }
 }
 .bm-ie-err { margin: 0; font-size: 0.8em; color: #dc2626; font-weight: 500; }
+
+/* ── Released Section ─────────────────────────── */
+.bm-released-section {
+    border-top: 1px solid #e5e7eb;
+}
+.bm-released-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 14px;
+    border: none;
+    background: #f9fafb;
+    color: #9ca3af;
+    font-size: 0.78em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover { background: #f3f4f6; color: #6b7280; }
+}
+.bm-released-chevron {
+    transition: transform 0.2s;
+    &.is-open { transform: rotate(180deg); }
+}
+.bm-released-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+}
+.bm-released-wrap.is-open { grid-template-rows: 1fr; }
+.bm-released-overflow { overflow: hidden; min-height: 0; }
+.bm-line--released {
+    opacity: 0.5;
+    background: #fafafa;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
 
 /* ── Responsive ───────────────────────────────── */
 @media (max-width: 640px) {
