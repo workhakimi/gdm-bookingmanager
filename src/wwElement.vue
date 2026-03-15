@@ -42,7 +42,7 @@
                         <div v-if="shouldRender(`h:${hdr.id}`)" class="bm-expand-content bm-expand-bar">
                             <template v-if="expandPhase === 'actions'">
                                 <div class="bm-expand-actions">
-                                    <button class="bm-action-btn bm-action-btn--danger" @click="emitDeleteHeader(hdr)">Delete Booking</button>
+                                    <button class="bm-action-btn bm-action-btn--danger" @click="emitDeleteHeader(hdr)">Release Booking</button>
                                 </div>
                             </template>
                             <template v-else>
@@ -105,7 +105,7 @@
                                 <!-- Actions -->
                                 <template v-if="expandPhase === 'actions'">
                                     <div class="bm-expand-actions">
-                                        <button class="bm-action-btn bm-action-btn--danger" @click="emitDeleteLineItem(hdr, item)">Delete Line</button>
+                                        <button class="bm-action-btn bm-action-btn--danger" @click="emitDeleteLineItem(hdr, item)">Release Line</button>
                                         <button class="bm-action-btn" @click="startUpdateQty(item)">Update Quantity</button>
                                     </div>
                                 </template>
