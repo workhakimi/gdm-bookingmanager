@@ -519,8 +519,8 @@ onUnmounted(() => clearTimeoutHandle());
 // ── Event Emitters ─────────────────────────────────────────
 
 function emitDeleteHeader(hdr) {
-
     const itemCount = hdr.items?.length || 0;
+    const skuList = (hdr.items || []).map(i => i.sku).join(', ');
 
     dispatch('onDeleteHeader', {
         booking_header: { id: hdr.id },
@@ -535,7 +535,7 @@ function emitDeleteHeader(hdr) {
             timestamp: klTimestamp(),
             category: 'Booking',
             action: 'Booking Released by User',
-            description: `In Booking ${hdr.bookingnumber}, all ${itemCount} line item(s) changed status to Released by User in Booking Manager.`,
+            description: `In Booking ${hdr.bookingnumber}, all ${itemCount} line item(s) changed status to Released by User in Booking Manager. (${skuList || 'none'})`,
             connection: hdr.id,
         },
     });
