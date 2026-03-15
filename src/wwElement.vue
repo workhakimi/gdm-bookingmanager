@@ -352,7 +352,7 @@ function toggleReleased(hdrId) {
 
 // ── Change Log per Card ───────────────────────────────────
 function cardChangeLogs(hdr) {
-    return changeLogData.value.filter(log => log.connection === hdr.id);
+    return changeLogData.value.filter(log => log.connection === hdr.id).slice().sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 }
 
 const openChangeLogCards = ref({});
