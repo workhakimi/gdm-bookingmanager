@@ -258,12 +258,6 @@ const actionResult = computed(() => {
     return resolved;
 });
 
-const userName = computed(() => {
-    const raw = props.content?.userName;
-    if (!raw) return 'Unknown';
-    const resolved = wwLib.wwUtils.getDataFromCollection(raw);
-    return (typeof resolved === 'string' && resolved) ? resolved : 'User';
-});
 
 // ── Status Color Maps ──────────────────────────────────────
 
@@ -523,7 +517,7 @@ onUnmounted(() => clearTimeoutHandle());
 // ── Event Emitters ─────────────────────────────────────────
 
 function emitDeleteHeader(hdr) {
-    const user = userName.value;
+
     const itemCount = hdr.items?.length || 0;
 
     dispatch('onDeleteHeader', {
@@ -539,14 +533,14 @@ function emitDeleteHeader(hdr) {
             timestamp: klTimestamp(),
             category: 'Booking',
             action: 'Booking Released by User',
-            description: `In Booking ${hdr.bookingnumber}, all ${itemCount} line item(s) changed status to Released by ${user} in Booking Manager.`,
+            description: `In Booking ${hdr.bookingnumber}, all ${itemCount} line item(s) changed status to Released by User in Booking Manager.`,
             connection: hdr.id,
         },
     });
 }
 
 function emitDeleteLineItem(hdr, item) {
-    const user = userName.value;
+
 
     dispatch('onDeleteLineItem', {
         booking_header: { id: hdr.id },
@@ -561,7 +555,7 @@ function emitDeleteLineItem(hdr, item) {
             timestamp: klTimestamp(),
             category: 'Booking',
             action: 'Item Released by User',
-            description: `In Booking ${hdr.bookingnumber}, line item SKU ${item.sku} changed status from ${item.status || '-'} to Released by ${user} in Booking Manager.`,
+            description: `In Booking ${hdr.bookingnumber}, line item SKU ${item.sku} changed status from ${item.status || '-'} to Released by User in Booking Manager.`,
             connection: hdr.id,
         },
     });
@@ -569,7 +563,7 @@ function emitDeleteLineItem(hdr, item) {
 
 function emitUpdateQty(hdr, item) {
     if (editAvailability.value < 0 || editQtyValue.value < 1) return;
-    const user = userName.value;
+
     const oldQty = item.quantity ?? 0;
     const newQty = editQtyValue.value;
 
@@ -586,7 +580,7 @@ function emitUpdateQty(hdr, item) {
             timestamp: klTimestamp(),
             category: 'Booking',
             action: 'Quantity Updated by User',
-            description: `In Booking ${hdr.bookingnumber}, line item SKU ${item.sku} quantity changed from ${oldQty} to ${newQty} by ${user} in Booking Manager.`,
+            description: `In Booking ${hdr.bookingnumber}, line item SKU ${item.sku} quantity changed from ${oldQty} to ${newQty} by User in Booking Manager.`,
             connection: hdr.id,
         },
     });

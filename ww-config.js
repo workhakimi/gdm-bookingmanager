@@ -12,7 +12,6 @@ export default {
                     'selectedLineItems',
                     'picReference',
                     'actionResult',
-                    'userName',
                     'changeLogData',
                 ],
             },
@@ -155,19 +154,6 @@ export default {
             bindingValidation: {
                 type: 'string',
                 tooltip: 'Bind a variable: null = idle, "successful" = success, "failed" = failure. Set by your workflow after processing an event.',
-            },
-            /* wwEditor:end */
-        },
-        userName: {
-            label: { en: 'Current User Name' },
-            type: 'Text',
-            section: 'settings',
-            bindable: true,
-            defaultValue: '',
-            /* wwEditor:start */
-            bindingValidation: {
-                type: 'string',
-                tooltip: 'Bind to current user display name for change log entries',
             },
             /* wwEditor:end */
         },
